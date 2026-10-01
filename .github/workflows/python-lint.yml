@@ -1,0 +1,49 @@
+name: Python Lint
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: ["master", "main"]
+    paths:
+      - "src/battleship/**.py"
+      - "tests/**.py"
+      - ".ruff.toml"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/**"
+
+permissions:
+  contents: write
+  statuses: write
+
+jobs:
+  python-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+          submodules: false
+
+      - uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57
+        with:
+          python-version: "3.14"
+          working-directory: "."
+          enable-cache: true
+          cache-dependency-glob: |
+            **/pyproject.toml
+            **/uv.lock
+
+      - name: Install deps
+        run: uv sync --only-group dev
+
+      - name: Lint
+        run: uv run ruff check .
+
+      - name: Format check
+        run: uv run ruff format . --check
+
+      - name: Type check
+        run: uv run ty check .
