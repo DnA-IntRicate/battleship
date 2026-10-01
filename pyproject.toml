@@ -25,4 +25,5 @@ battleship = "battleship.main:main"
 [dependency-groups]
 dev = [
     "ruff>=0.16.5",
+    "ty>=0.0.75",
 ]
