@@ -104,6 +104,9 @@ htmlcov/
 # pyenv
 # .python-version
 
+# Ruff
+.ruff_cache/
+
 ### Windows
 # Windows thumbnail cache files
 Thumbs.db
