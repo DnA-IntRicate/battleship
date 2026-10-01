@@ -14,7 +14,29 @@ trim_trailing_whitespace = true
 charset = utf-8
 curly_bracket_next_line = true
 
-[Makefile]
-indent_size = 4
+# Preserve whitespace for Markdown
+[*.md]
+trim_trailing_whitespace = false
+
+# Two-space indentation for YAML
+[*.yml]
+indent_size = 2
+tab_width = 2
+[*.yaml]
+indent_size = 2
+tab_width = 2
+
+# Two-space indentation for git configuration files
+[.git*]
+indent_size = 2
+tab_width = 2
+
+# .gitmodules Requires tabs
+[.gitmodules]
 indent_style = tab
+
+# Tab characters for Makefiles
+[Makefile]
+indent_style = tab
+indent_size = 4
 tab_width = 4
