@@ -1,0 +1,23 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/battleship"]
+
+[project]
+name = "battleship"
+version = "0.0.1"
+description = "Group project for EEE3096S-2026 at the University of Cape Town (UCT)."
+readme = "README.md"
+authors = [
+    { name = "Muddathir Firfirey" },
+    { name = "Adam Foflonker" },
+]
+requires-python = ">=3.14"
+
+[project.scripts]
+battleship = "battleship.main:main"
+
+[dependency-groups]
+dev = []
