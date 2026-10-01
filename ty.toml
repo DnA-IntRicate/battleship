@@ -1,0 +1,15 @@
+# Ty static type checker configuration file.
+# See: https://docs.astral.sh/ty/configuration/.
+
+[src]
+include = [
+    "src/battleship",
+    "tests/",
+]
+# exclude = ["..."]
+
+# See: https://docs.astral.sh/ty/reference/rules/.
+[rules]
+deprecated = "error"
+experimental-syntax = "error"
+invalid-legacy-positional-parameter = "error"
