@@ -23,4 +23,6 @@ dependencies = [
 battleship = "battleship.main:main"
 
 [dependency-groups]
-dev = []
+dev = [
+    "ruff>=0.16.5",
+]
