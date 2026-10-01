@@ -1,0 +1,18 @@
+[run]
+branch = true
+source = ["src"]
+omit = [
+    "*/__init__.py",
+    # "src/battleship/main.py",
+]
+
+[report]
+show_missing = true
+skip_empty = true
+exclude_also = [
+    # Excludes scripts from the coverage report.
+    "if __name__ == .__main__.:",
+]
+
+# Fails pytest if the total coverage falls below this percentage
+fail_under = 70
