@@ -37,3 +37,4 @@ out/*       binary
 
 # Linguist exclusions
 **/Drivers/** linguist-vendored=true
+**/drivers/** linguist-vendored=true
