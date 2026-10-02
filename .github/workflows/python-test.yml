@@ -1,4 +1,4 @@
-name: Python Lint
+name: Python Test
 
 on:
   pull_request:
@@ -7,6 +7,21 @@ on:
     paths:
       - "src/battleship/**.py"
       - "tests/**.py"
+      - ".coveragerc.toml"
+      - ".pytest.toml"
+      - ".ruff.toml"
+      - "pyproject.toml"
+      - "ty.toml"
+      - "uv.lock"
+      - ".github/workflows/python-test.yml"
+
+  push:
+    branches: ["master", "main"]
+    paths:
+      - "src/battleship/**.py"
+      - "tests/**.py"
+      - ".coveragerc.toml"
+      - ".pytest.toml"
       - ".ruff.toml"
       - "pyproject.toml"
       - "ty.toml"
@@ -18,12 +33,13 @@ permissions:
   statuses: write
 
 jobs:
-  python-lint:
+  python-test:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v5
         with:
+          lfs: true
           fetch-depth: 0
           persist-credentials: true
           submodules: false
@@ -34,17 +50,14 @@ jobs:
           working-directory: "."
           enable-cache: true
           cache-dependency-glob: |
+            **/.coveragerc.toml
+            **/.pytest.toml
             **/pyproject.toml
             **/uv.lock
 
       - name: Install deps
-        run: uv sync --only-group dev
+        run: uv sync --all-groups
 
-      - name: Lint
-        run: uv run ruff check .
-
-      - name: Format check
-        run: uv run ruff format . --check
-
-      - name: Type check
-        run: uv run ty check .
+      - name: Run PyTest
+        run: |
+          uv run pytest
