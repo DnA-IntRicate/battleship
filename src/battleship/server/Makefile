@@ -20,15 +20,11 @@ C_SOURCES =  \
 core/source/main.c \
 core/source/stm32f0xx_hal_msp.c \
 core/source/stm32f0xx_it.c \
-core/source/syscalls.c \
+core/source/syscalls.c
 core/source/sysmem.c \
 core/source/system_stm32f0xx.c \
 drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_adc.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_adc_ex.c \
 drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_cortex.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_dac.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_dac_ex.c \
 drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_dma.c \
 drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_exti.c \
 drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_flash.c \
@@ -41,18 +37,13 @@ drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_pwr_ex.c \
 drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_rcc.c \
 drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_rcc_ex.c \
 drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_tim.c \
+drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart.c \
 drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_tim_ex.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_ll_exti.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_ll_gpio.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_ll_rcc.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_ll_utils.c \
-# drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart.c \
-# drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart_ex.c \
+drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart_ex.c \
 
 # ASM sources
 ASM_SOURCES =  \
-core/asm/startup_stm32f051c8tx.s
-
+core/asm/startup_stm32f051x8.s
 
 #######################################
 # Binaries
@@ -74,22 +65,21 @@ endif
 # The gcc compiler bin path can be either defined in make command via GCC_PATH variable (> make GCC_PATH=xxx)
 # either it can be added to the PATH environment variable.
 ifdef GCC_PATH
-	CC = $(GCC_PATH)/$(PREFIX)gcc
-	AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
-	CP = $(GCC_PATH)/$(PREFIX)objcopy
-	SZ = $(GCC_PATH)/$(PREFIX)size
+CC = $(GCC_PATH)/$(PREFIX)gcc
+AS = $(GCC_PATH)/$(PREFIX)gcc -x assembler-with-cpp
+CP = $(GCC_PATH)/$(PREFIX)objcopy
+SZ = $(GCC_PATH)/$(PREFIX)size
 else
-	CC = $(PREFIX)gcc
-	AS = $(PREFIX)gcc -x assembler-with-cpp
-	CP = $(PREFIX)objcopy
-	SZ = $(PREFIX)size
+CC = $(PREFIX)gcc
+AS = $(PREFIX)gcc -x assembler-with-cpp
+CP = $(PREFIX)objcopy
+SZ = $(PREFIX)size
 endif
-
 HEX = $(CP) -O ihex
 BIN = $(CP) -O binary -S
 
 #######################################
-# Flags
+# CFLAGS
 #######################################
 
 # CPU
@@ -98,8 +88,8 @@ CPU = -mcpu=cortex-m0
 # FPU
 # NONE for Cortex-M0/M0+/M3
 
-# Mcu
-MCU = $(CPU) -mthumb # $(FPU) $(FLOAT-ABI)
+# MCU
+MCU = $(CPU) -mthumb $(FPU) $(FLOAT-ABI)
 
 # Assembly defines
 ASM_DEFS =
@@ -107,18 +97,7 @@ ASM_DEFS =
 # C defines
 C_DEFS =  \
 -DSTM32F051x8 \
--DUSE_FULL_LL_DRIVER \
--DUSE_HAL_DRIVER \
--DHSE_VALUE=8000000 \
--DHSE_STARTUP_TIMEOUT=100 \
--DLSE_STARTUP_TIMEOUT=5000 \
--DLSE_VALUE=32768 \
--DHSI_VALUE=8000000 \
--DLSI_VALUE=40000 \
--DVDD_VALUE=3300 \
--DPREFETCH_ENABLE=1 \
--DINSTRUCTION_CACHE_ENABLE=0 \
--DDATA_CACHE_ENABLE=0
+-DUSE_HAL_DRIVER
 
 # Assembly includes
 ASM_INCLUDES =
@@ -127,6 +106,7 @@ ASM_INCLUDES =
 C_INCLUDES =  \
 -Icore/include \
 -Idrivers/STM32F0xx_HAL_Driver/Inc \
+-Idrivers/STM32F0xx_HAL_Driver/Inc/Legacy \
 -Idrivers/CMSIS/Device/ST/STM32F0xx/Include \
 -Idrivers/CMSIS/Include
 
@@ -135,14 +115,14 @@ ASMFLAGS = $(MCU) $(ASM_DEFS) $(ASM_INCLUDES) $(OPT) -Wall -fdata-sections -ffun
 CFLAGS += $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
 
 ifeq ($(DEBUG), 1)
-	CFLAGS += -g -gdwarf-2
+CFLAGS += -g -gdwarf-2
 endif
 
 # Generate dependency information
 CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 
 # Linker script
-LDSCRIPT = STM32F051C8TX_FLASH.ld
+LDSCRIPT = STM32F051xx_FLASH.ld
 
 # Libraries
 LIBS = -lc -lm -lnosys
@@ -159,11 +139,15 @@ vpath %.c $(sort $(dir $(C_SOURCES)))
 # List of ASM program objects
 OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASM_SOURCES:.s=.o)))
 vpath %.s $(sort $(dir $(ASM_SOURCES)))
+OBJECTS += $(addprefix $(BUILD_DIR)/,$(notdir $(ASMM_SOURCES:.S=.o)))
+vpath %.S $(sort $(dir $(ASMM_SOURCES)))
 
 $(BUILD_DIR)/%.o: %.c Makefile | $(BUILD_DIR)
 	$(CC) -c $(CFLAGS) -Wa,-a,-ad,-alms=$(BUILD_DIR)/$(notdir $(<:.c=.lst)) $< -o $@
 
 $(BUILD_DIR)/%.o: %.s Makefile | $(BUILD_DIR)
+	$(AS) -c $(CFLAGS) $< -o $@
+$(BUILD_DIR)/%.o: %.S Makefile | $(BUILD_DIR)
 	$(AS) -c $(CFLAGS) $< -o $@
 
 $(BUILD_DIR)/$(TARGET).elf: $(OBJECTS) Makefile
@@ -179,7 +163,9 @@ $(BUILD_DIR)/%.bin: $(BUILD_DIR)/%.elf | $(BUILD_DIR)
 $(BUILD_DIR):
 	mkdir $@
 
+# Cleanup
 clean:
 	-rm -fR $(BUILD_DIR)
 
+# Dependencies
 -include $(wildcard $(BUILD_DIR)/*.d)
