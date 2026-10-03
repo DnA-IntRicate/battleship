@@ -9,7 +9,7 @@
             "type": "cortex-debug",
             "servertype": "openocd",
             "preLaunchTask": "Build STM",
-            "device": "src/battleship/server/core/asm/stm32f051x8.s",
+            "device": "src/battleship/server/asm/stm32f051x8.s",
             "configFiles": [
                 "openocd.cfg"
             ]
@@ -23,7 +23,7 @@
             "type": "cortex-debug",
             "servertype": "openocd",
             "preLaunchTask": "Build STM",
-            "device": "src/battleship/server/core/asm/stm32f051x8.s",
+            "device": "src/battleship/server/asm/stm32f051x8.s",
             "configFiles": [
                 "openocd.cfg"
             ]

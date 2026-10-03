@@ -17,12 +17,12 @@ BUILD_DIR = build
 
 # C sources
 C_SOURCES =  \
-src/battleship/server/core/source/main.c \
-src/battleship/server/core/source/stm32f0xx_hal_msp.c \
-src/battleship/server/core/source/stm32f0xx_it.c \
-src/battleship/server/core/source/syscalls.c \
-src/battleship/server/core/source/sysmem.c \
-src/battleship/server/core/source/system_stm32f0xx.c \
+src/battleship/server/source/main.c \
+src/battleship/server/source/stm32f0xx_hal_msp.c \
+src/battleship/server/source/stm32f0xx_it.c \
+src/battleship/server/source/syscalls.c \
+src/battleship/server/source/sysmem.c \
+src/battleship/server/source/system_stm32f0xx.c \
 src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal.c \
 src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_cortex.c \
 src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_dma.c \
@@ -43,7 +43,7 @@ src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart_ex.c \
 
 # ASM sources
 ASM_SOURCES =  \
-src/battleship/server/core/asm/startup_stm32f051x8.s
+src/battleship/server/asm/startup_stm32f051x8.s
 
 #######################################
 # Binaries
@@ -104,7 +104,7 @@ ASM_INCLUDES =
 
 # C includes
 C_INCLUDES =  \
--Isrc/battleship/server/core/include \
+-Isrc/battleship/server/include \
 -Isrc/battleship/server/drivers/STM32F0xx_HAL_Driver/Inc \
 -Isrc/battleship/server/drivers/STM32F0xx_HAL_Driver/Inc/Legacy \
 -Isrc/battleship/server/drivers/CMSIS/Device/ST/STM32F0xx/Include \
