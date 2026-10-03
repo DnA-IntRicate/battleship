@@ -20,7 +20,7 @@ C_SOURCES =  \
 core/source/main.c \
 core/source/stm32f0xx_hal_msp.c \
 core/source/stm32f0xx_it.c \
-core/source/syscalls.c
+core/source/syscalls.c \
 core/source/sysmem.c \
 core/source/system_stm32f0xx.c \
 drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal.c \
