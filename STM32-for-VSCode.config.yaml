@@ -62,18 +62,17 @@ libraryDirectories: []
 # excludes:
 #   - "**/Examples/**"
 
-
 # Include directories (directories containing .h or .hpp files)
 # If a CubeMX makefile is present it will automatically include the include directories from that makefile.
 includeDirectories:
-  - core/asm/**
-  - core/include/**
-  - core/source/**
-  - drivers/**
-  - drivers/CMSIS/Include/**
-  - drivers/CMSIS/Device/ST/STM32F0xx/Include/**
-  - drivers/STM32F0xx_HAL_Driver/Inc/**
-  - drivers/STM32F0xx_HAL_Driver/Inc/Legacy/**
+  - src/battleship/server/core/asm/**
+  - src/battleship/server/core/include/**
+  - src/battleship/server/core/source/**
+  - src/battleship/server/drivers/**
+  - src/battleship/server/drivers/CMSIS/Include/**
+  - src/battleship/server/drivers/CMSIS/Device/ST/STM32F0xx/Include/**
+  - src/battleship/server/drivers/STM32F0xx_HAL_Driver/Inc/**
+  - src/battleship/server/drivers/STM32F0xx_HAL_Driver/Inc/Legacy/**
 
 # Files that should be included in the compilation.
 # If a CubeMX makefile is present it will automatically include the  c and cpp/cxx files from that makefile.
@@ -81,9 +80,9 @@ includeDirectories:
 # Do mind that double stars are reserved in yaml
 # these should be escaped with a: \ or the name should be in double quotes e.g. "HARDWARE_DRIVER*.c"
 sourceFiles:
-  - core/asm/**
-  - core/source/**
-  - drivers/STM32F0xx_HAL_Driver/Src/**
+  - src/battleship/server/core/asm/**
+  - src/battleship/server/core/source/**
+  - src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/**
 
 # When no makefile is present it will show a warning pop-up.
 # However when compilation without the CubeMX Makefile is desired, this can be turned of.

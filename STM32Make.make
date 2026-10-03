@@ -6,7 +6,7 @@
 # Generic Makefile (based on gcc)
 #
 # ChangeLog :
-#   2024-04-27 - Added env file inclusion. 
+#   2024-04-27 - Added env file inclusion.
 #                Added way to overide: build directory, target name and optimisation.
 #                Added GCC_PATH by env file to not make the makefile machine dependent.
 #                Currently folder structure in build directory is preserved
@@ -75,30 +75,30 @@ endif
 ######################################
 # C sources
 C_SOURCES =  \
-core/source/lcd_stm32f0.c \
-core/source/main.c \
-core/source/stm32f0xx_hal_msp.c \
-core/source/stm32f0xx_it.c \
-core/source/syscalls.c \
-core/source/sysmem.c \
-core/source/system_stm32f0xx.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_cortex.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_dma.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_exti.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_flash.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_flash_ex.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_gpio.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_i2c.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_i2c_ex.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_pwr.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_pwr_ex.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_rcc.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_rcc_ex.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_tim.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_tim_ex.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart_ex.c
+src/battleship/server/core/source/lcd_stm32f0.c \
+src/battleship/server/core/source/main.c \
+src/battleship/server/core/source/stm32f0xx_hal_msp.c \
+src/battleship/server/core/source/stm32f0xx_it.c \
+src/battleship/server/core/source/syscalls.c \
+src/battleship/server/core/source/sysmem.c \
+src/battleship/server/core/source/system_stm32f0xx.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_cortex.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_dma.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_exti.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_flash.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_flash_ex.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_gpio.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_i2c.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_i2c_ex.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_pwr.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_pwr_ex.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_rcc.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_rcc_ex.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_tim.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_tim_ex.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart_ex.c
 
 
 CXX_SOURCES = \
@@ -106,7 +106,7 @@ CXX_SOURCES = \
 
 # ASM sources
 ASM_SOURCES =  \
-core/asm/startup_stm32f051x8.s
+src/battleship/server/core/asm/startup_stm32f051x8.s
 
 
 #######################################
@@ -162,17 +162,17 @@ OPENOCD ?= openocd
 CPU = -mcpu=cortex-m0
 
 # fpu
-FPU = 
+FPU =
 
 # float-abi
-FLOAT-ABI = 
+FLOAT-ABI =
 
 # mcu
 MCU = $(CPU) -mthumb $(FPU) $(FLOAT-ABI)
 
 # macros for gcc
 # AS defines
-AS_DEFS = 
+AS_DEFS =
 
 # C defines
 C_DEFS =  \
@@ -191,25 +191,25 @@ AS_INCLUDES = \
 
 # C includes
 C_INCLUDES =  \
--Icore/include \
--Idrivers/CMSIS/Device/ST/STM32F0xx/Include \
--Idrivers/CMSIS/Include \
--Idrivers/STM32F0xx_HAL_Driver/Inc \
--Idrivers/STM32F0xx_HAL_Driver/Inc/Legacy
+-Isrc/battleship/server/core/include \
+-Isrc/battleship/server/drivers/CMSIS/Device/ST/STM32F0xx/Include \
+-Isrc/battleship/server/drivers/CMSIS/Include \
+-Isrc/battleship/server/drivers/STM32F0xx_HAL_Driver/Inc \
+-Isrc/battleship/server/drivers/STM32F0xx_HAL_Driver/Inc/Legacy
 
 
 
 # compile gcc flags
-ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(C_INCLUDES) $(C_DEFS) $(OPTIMIZATION_FLAGS) 
+ASFLAGS = $(MCU) $(AS_DEFS) $(AS_INCLUDES) $(C_INCLUDES) $(C_DEFS) $(OPTIMIZATION_FLAGS)
 
 CFLAGS = $(MCU) $(C_DEFS) $(C_INCLUDES) $(OPTIMIZATION_FLAGS)
 
 CXXFLAGS = $(MCU) $(CXX_DEFS) $(C_INCLUDES) $(OPTIMIZATION_FLAGS)
 
 # Add additional flags
-CFLAGS += -Wall -fdata-sections -ffunction-sections 
-ASFLAGS += -Wall -fdata-sections -ffunction-sections 
-CXXFLAGS += 
+CFLAGS += -Wall -fdata-sections -ffunction-sections
+ASFLAGS += -Wall -fdata-sections -ffunction-sections
+CXXFLAGS +=
 
 # Generate dependency information
 CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
@@ -228,12 +228,12 @@ CXXFLAGS += $(ASSEMBLER_LIST_OUTPUT_FLAG)
 LDSCRIPT = STM32F051xx_FLASH.ld
 
 # libraries
-LIBS = -lc -lm -lnosys 
+LIBS = -lc -lm -lnosys
 LIBDIR = \
 
 
 # Additional LD Flags from config file
-ADDITIONALLDFLAGS = -specs=nano.specs 
+ADDITIONALLDFLAGS = -specs=nano.specs
 
 LDFLAGS = $(MCU) $(ADDITIONALLDFLAGS) -T$(LDSCRIPT) $(LIBDIR) $(LIBS) -Wl,-Map=$(BUILD_DIRECTORY)/$(TARGET).map,--cref -Wl,--gc-sections
 
@@ -263,14 +263,14 @@ vpath %.S $(sort $(dir $(ASM_SOURCES)))
 #######################################
 # note needs to be located as the first rule to be the default build rule
 # default action: build all
-all: $(RELEASE_DIRECTORY)/$(TARGET).elf $(RELEASE_DIRECTORY)/$(TARGET).hex $(RELEASE_DIRECTORY)/$(TARGET).bin $(RELEASE_DIRECTORY)/$(TARGET).lss 
+all: $(RELEASE_DIRECTORY)/$(TARGET).elf $(RELEASE_DIRECTORY)/$(TARGET).hex $(RELEASE_DIRECTORY)/$(TARGET).bin $(RELEASE_DIRECTORY)/$(TARGET).lss
 
 
 # C build
 $(RELEASE_DIRECTORY)/%.o: %.c STM32Make.make | $(RELEASE_DIRECTORY)
 	$(CC) -c $(CFLAGS) $< -o $@
 
-# C++ build 
+# C++ build
 $(RELEASE_DIRECTORY)/%.o: %.cc STM32Make.make | $(RELEASE_DIRECTORY)
 	$(CXX) -c $(CXXFLAGS) $< -o $@
 
@@ -345,7 +345,7 @@ clean:
 # custom makefile rules
 #######################################
 
-	
+
 #######################################
 # dependencies
 #######################################

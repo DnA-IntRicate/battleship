@@ -17,33 +17,33 @@ BUILD_DIR = build
 
 # C sources
 C_SOURCES =  \
-core/source/main.c \
-core/source/stm32f0xx_hal_msp.c \
-core/source/stm32f0xx_it.c \
-core/source/syscalls.c \
-core/source/sysmem.c \
-core/source/system_stm32f0xx.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_cortex.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_dma.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_exti.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_flash.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_flash_ex.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_gpio.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_i2c.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_i2c_ex.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_pwr.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_pwr_ex.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_rcc.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_rcc_ex.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_tim.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_tim_ex.c \
-drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart_ex.c \
+src/battleship/server/core/source/main.c \
+src/battleship/server/core/source/stm32f0xx_hal_msp.c \
+src/battleship/server/core/source/stm32f0xx_it.c \
+src/battleship/server/core/source/syscalls.c \
+src/battleship/server/core/source/sysmem.c \
+src/battleship/server/core/source/system_stm32f0xx.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_cortex.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_dma.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_exti.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_flash.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_flash_ex.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_gpio.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_i2c.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_i2c_ex.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_pwr.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_pwr_ex.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_rcc.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_rcc_ex.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_tim.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_tim_ex.c \
+src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart_ex.c \
 
 # ASM sources
 ASM_SOURCES =  \
-core/asm/startup_stm32f051x8.s
+src/battleship/server/core/asm/startup_stm32f051x8.s
 
 #######################################
 # Binaries
@@ -104,11 +104,11 @@ ASM_INCLUDES =
 
 # C includes
 C_INCLUDES =  \
--Icore/include \
--Idrivers/STM32F0xx_HAL_Driver/Inc \
--Idrivers/STM32F0xx_HAL_Driver/Inc/Legacy \
--Idrivers/CMSIS/Device/ST/STM32F0xx/Include \
--Idrivers/CMSIS/Include
+-Isrc/battleship/server/core/include \
+-Isrc/battleship/server/drivers/STM32F0xx_HAL_Driver/Inc \
+-Isrc/battleship/server/drivers/STM32F0xx_HAL_Driver/Inc/Legacy \
+-Isrc/battleship/server/drivers/CMSIS/Device/ST/STM32F0xx/Include \
+-Isrc/battleship/server/drivers/CMSIS/Include
 
 # Compile gcc flags
 ASMFLAGS = $(MCU) $(ASM_DEFS) $(ASM_INCLUDES) $(OPT) -Wall -fdata-sections -ffunction-sections
