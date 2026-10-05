@@ -2,8 +2,6 @@
 # EEE3095S 2026 - Project
 #
 # Let's play Battleship!
-#
-# Generic gcc Makefile.
 #######################################################
 
 TARGET = battleship-server
@@ -166,6 +164,16 @@ $(BUILD_DIR):
 # Cleanup
 clean:
 	-rm -fR $(BUILD_DIR)
+
+# Flash with OpenOCD (ships with the STM32 for VS Code extension's bundles)
+OPENOCD ?= openocd
+
+ELF := $(BUILD_DIR)/$(TARGET).elf
+flash: $(ELF)
+	$(OPENOCD) -f interface/stlink.cfg -f target/stm32f0x.cfg \
+		-c "program $< verify reset exit"
+
+.PHONY: all flash clean
 
 # Dependencies
 -include $(wildcard $(BUILD_DIR)/*.d)
