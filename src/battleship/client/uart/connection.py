@@ -4,6 +4,18 @@ import serial
 
 
 class SerialConnection:
+    """
+    Threaded serial connection to a UART device.
+
+    Opens the configured port on construction and starts a background thread
+    that continuously drains incoming bytes into an internal buffer. The
+    `read*` methods are non-blocking - they return buffered data immediately,
+    or `None` if nothing is available yet.
+
+    It is preffered to use this class as a context manager so the
+    reader thread stops and the port is released on exit.
+    """
+
     port: str = "COM3"  # On Windows this can be COM3 or COM4
     baudrate: int = 115200
     bytesize = serial.EIGHTBITS
