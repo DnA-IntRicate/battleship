@@ -1,7 +1,6 @@
 from battleship.client.uart import SerialConnection
 
-
-def main():
+if __name__ == "__main__":
     print("Hello world from battleship client!")
 
     # UART Hello world
