@@ -59,7 +59,7 @@ class SerialConnection:
         chunk = bytes(self._buffer[:n])
         del self._buffer[:n]
 
-        return chunk.decode("utf-8", errors="replace").rstrip()
+        return chunk.replace(b"\x00", b"").decode("utf-8", errors="replace").rstrip()
 
     def _raise_if_failed(self):
         if self._error is not None:
