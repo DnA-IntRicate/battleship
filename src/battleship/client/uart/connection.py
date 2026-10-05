@@ -1,4 +1,5 @@
 import threading
+
 import serial
 
 
@@ -85,11 +86,14 @@ class SerialConnection:
 
             return self._pop(size)
 
-    def read_until(self, expected: bytes, size: int | None = None, timeout: float = 0.0) -> str | None:
+    def read_until(
+        self, expected: bytes, size: int | None = None, timeout: float = 0.0
+    ) -> str | None:
         """
         Return data up to and including `expected` once a full message has
         arrived, else None. Partial lines stay buffered until complete.
         """
+
         def end_index() -> int | None:
             i = self._buffer.find(expected)
             if i != -1:
