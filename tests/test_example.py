@@ -1,4 +1,4 @@
-from battleship.main import main
+from battleship.client.main import main
 
 
 def test_example():

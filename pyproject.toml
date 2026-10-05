@@ -21,7 +21,7 @@ dependencies = [
 ]
 
 [project.scripts]
-battleship = "battleship.main:main"
+battleship = "battleship.client.main:main"
 
 [dependency-groups]
 dev = [
