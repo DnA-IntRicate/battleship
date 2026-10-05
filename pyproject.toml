@@ -22,6 +22,7 @@ dependencies = [
 
 [project.scripts]
 battleship = "battleship.cli:main"
+battleship-client = "battleship.client.main:main"
 
 [dependency-groups]
 dev = [
@@ -33,11 +34,12 @@ dev = [
 ]
 
 [tool.poe.tasks]
-build = "make -j"
-flash = "make flash"
-client = "python -m battleship.client.main"
+build = "make -j6 DEBUG=1 -f STM32Make.make"
+clean = "make -j6 DEBUG=1 -f STM32Make.make clean"
+flash = "make -j6 DEBUG=1 -f STM32Make.Make flash"
+client = "uv run battleship-client"
 ports = "python -m scripts.ports"
-settle = "python -c \"import time; time.sleep(1)\"" # Let the board reboot
+settle = "python -c \"import time; time.sleep(1)\""
 
 up = [
   { ref = "build" },
