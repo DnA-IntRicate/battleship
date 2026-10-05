@@ -88,6 +88,7 @@ def fake(conn) -> FakeSerial:
 
 # ---- Non-blocking behavour ------------------------------------------------
 
+
 def test_read_methods_return_none_when_empty(conn: SerialConnection):
     assert conn.read(10) is None
     assert conn.readline() is None
@@ -129,6 +130,7 @@ def test_timeout_expires_returns_none(conn: SerialConnection):
 
 # ---- read / read_until -----------------------------------------------------
 
+
 def test_read_returns_at_most_size_bytes(conn: SerialConnection, fake: FakeSerial):
     fake.feed(b"abcdef")
     assert wait_until(lambda: conn.in_waiting == 6)
@@ -159,6 +161,7 @@ def test_invalid_utf8_is_replaced(conn: SerialConnection, fake: FakeSerial):
 
 # ---- write / lifecycle -----------------------------------------------------
 
+
 def test_write_sends_and_flushes(conn: SerialConnection, fake: FakeSerial):
     conn.write(b"CMD\n")
     assert bytes(fake.written) == b"CMD\n"
@@ -188,6 +191,7 @@ def test_stale_input_is_discarded_on_connect(monkeypatch):
 
 
 # ---- Error handling --------------------------------------------------------
+
 
 def test_reader_error_raises_on_next_read(conn: SerialConnection, fake: FakeSerial):
     fake.fail(serial.SerialException("device unplugged"))
