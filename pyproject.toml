@@ -16,11 +16,12 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
+    "pylance>=12.0.0",
     "pyserial>=3.5",
 ]
 
 [project.scripts]
-battleship = "battleship.main:main"
+battleship = "battleship.client.main:main"
 
 [dependency-groups]
 dev = [

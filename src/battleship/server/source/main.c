@@ -1,5 +1,7 @@
 #include <main.h>
 #include <lcd_stm32f0.h>
+#include <stdio.h>
+#include <string.h>
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
@@ -71,15 +73,17 @@ int main(void)
 
     /* USER CODE END 2 */
 
-    /* Infinite loop */
-    /* USER CODE BEGIN WHILE */
+    int counter = 0;
     while (1)
     {
-        /* USER CODE END WHILE */
+        char message[64];
+        int len = snprintf(message, sizeof(message), "Battleship broadcast from server %d!\r\n", counter++);
+        if (len >= (int)sizeof(message))
+            len = sizeof(message) - 1;  // Truncate
 
-        /* USER CODE BEGIN 3 */
+        HAL_UART_Transmit(&huart1, (uint8_t*)message, (uint16_t)len, HAL_MAX_DELAY);
+        HAL_Delay(1000);
     }
-    /* USER CODE END 3 */
 }
 
 /**
