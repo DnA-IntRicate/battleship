@@ -2,6 +2,9 @@ import threading
 
 import serial
 
+# On Windows this can be COM3 or COM4
+DEFAULT_COM_PORT: str = "COM3"
+
 
 class SerialConnection:
     """
@@ -16,15 +19,17 @@ class SerialConnection:
     reader thread stops and the port is released on exit.
     """
 
-    port: str = "COM3"  # On Windows this can be COM3 or COM4
+    port: str = DEFAULT_COM_PORT
     baudrate: int = 115200
     bytesize = serial.EIGHTBITS
     parity = serial.PARITY_NONE
     stopbits = serial.STOPBITS_ONE
     timeout: float = 0.1
 
-    def __init__(self):
+    def __init__(self, port: str | None = None):
         """Initializes this multithreaded serial connection."""
+        self.port = port or self.port
+
         self._conn = serial.Serial(
             port=self.port,
             baudrate=self.baudrate,
