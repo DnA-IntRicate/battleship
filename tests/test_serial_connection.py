@@ -4,6 +4,7 @@ import time
 import pytest
 import serial
 
+from battleship.cli import parse_args
 from battleship.client.uart import SerialConnection
 
 
@@ -207,3 +208,12 @@ def test_buffered_data_is_drained_before_error_raised(conn: SerialConnection, fa
     assert conn.readline(timeout=1.0) == "last words"
     with pytest.raises(serial.SerialException):
         conn.readline(timeout=1.0)
+
+
+# ---- Port handling --------------------------------------------------------
+
+
+def test_port_flag_and_passthrough():
+    args, rest = parse_args(["--port", "COM7", "client"])
+    assert args.port == "COM7"
+    assert rest == ["client"]
