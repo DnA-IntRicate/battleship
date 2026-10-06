@@ -1,9 +1,7 @@
-import argparse
 import os
 import sys
 
-from battleship.client.uart import SerialConnection, DEFAULT_COM_PORT
-from battleship.cli import parse_args
+from battleship.client.uart import DEFAULT_COM_PORT, SerialConnection
 
 
 def main():

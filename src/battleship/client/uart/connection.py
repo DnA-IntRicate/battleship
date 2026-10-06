@@ -5,6 +5,7 @@ import serial
 # On Windows this can be COM3 or COM4
 DEFAULT_COM_PORT: str = "COM3"
 
+
 class SerialConnection:
     """
     Threaded serial connection to a UART device.

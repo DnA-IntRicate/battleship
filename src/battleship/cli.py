@@ -3,9 +3,9 @@ import os
 import sys
 from pathlib import Path
 
-from battleship.client.uart import DEFAULT_COM_PORT
-
 from poethepoet.app import PoeThePoet
+
+from battleship.client.uart import DEFAULT_COM_PORT
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -20,8 +20,7 @@ def parse_args(argv: list[str] | None = None) -> tuple[argparse.Namespace, list[
         "-p",
         "--port",
         default=os.environ.get("BATTLESHIP_PORT", DEFAULT_COM_PORT),
-        help="serial port, e.g. COM4 or /dev/ttyACM0 "
-        "(default: $BATTLESHIP_PORT or %(default)s)",
+        help="serial port, e.g. COM4 or /dev/ttyACM0 (default: $BATTLESHIP_PORT or %(default)s)",
     )
 
     return parser.parse_known_args(argv)
