@@ -23,8 +23,10 @@ class SerialConnection:
     stopbits = serial.STOPBITS_ONE
     timeout: float = 0.1
 
-    def __init__(self):
+    def __init__(self, port: str | None = None):
         """Initializes this multithreaded serial connection."""
+        self.port = port or self.port
+
         self._conn = serial.Serial(
             port=self.port,
             baudrate=self.baudrate,
