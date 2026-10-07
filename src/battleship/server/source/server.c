@@ -79,45 +79,6 @@ static size_t finish_message(char* out, size_t len, bool use_checksum)
 }
 
 /**
- * Message framing & processing
- */
-
-static size_t process_frame(bs_server_t* server, const uint8_t* line, size_t len, char* out)
-{
-    // A trailing "*HH" means the client wants a checksummed reply, even if
-    // the request itself turns out to be bad.
-    bool   has_checksum = (len >= 3) && (line[len - 3] == '*');
-    size_t my_len   = has_checksum ? (len - 3) : len;
-
-    // Invalid bytes, then checksum (a frame containing any byte outside the range 0x20 - 0x7E is rejected).
-    for (size_t i = 0; i < len; ++i)
-        if ((line[i] < 0x20) || (line[i] > 0x7E))
-            return finish_message(out, nack(out, "BADCMD"), has_checksum);
-
-    if (has_checksum)
-    {
-        int hi = hex_value(line[len - 2]);
-        int lo = hex_value(line[len - 1]);
-
-        if ((hi < 0) || (lo < 0) || ((uint8_t)((hi << 4) | lo) != xor_sum(line, my_len)))
-            return finish_message(out, nack(out, "CHECKSUM"), has_checksum);
-    }
-
-    char payload[BS_MAX_REQUEST + 1];
-    memcpy(payload, line, my_len);
-    payload[my_len] = '\0';
-
-    return finish_message(out, dispatch(server, payload, out), has_checksum);
-}
-
-static void rx_reset(bs_server_t* server)
-{
-    server->rx_len      = 0;
-    server->rx_overflow = false;
-    server->rx_active   = false;
-}
-
-/**
  * Parsing
  */
 
@@ -193,6 +154,25 @@ static cell_result_t parse_cell(const char* str, uint8_t* out_index)
 
     *out_index = (uint8_t)(row * 10 + col);
     return CELL_OK;
+}
+
+/**
+ * Game state
+ */
+
+static void fleet_clear(bs_fleet_t* fleet)
+{
+    memset(fleet, 0, sizeof(bs_fleet_t));
+    memset(fleet->cell, '.', BS_NUM_CELLS);  // Open waters must be marked with a '.'
+}
+
+static void game_reset(bs_server_t* server)
+{
+    fleet_clear(&server->fleet[0]);
+    fleet_clear(&server->fleet[1]);
+
+    server->state = BS_IDLE;
+    server->turn  = 0;
 }
 
 /**
@@ -511,28 +491,49 @@ static size_t dispatch_command(bs_server_t* server, char* payload, char* out)
         case CMD_STATE:      return command_state(server, player, out);
         case CMD_RESIGN:     return command_resign(server, out);
         case CMD_DISCONNECT: return command_disconnect(server, out);
+        case CMD_COUNT:      break;
     }
 
     return nack(out, "BADCMD");
 }
 
 /**
- * Game state
+ * Message framing & processing
  */
 
-static void fleet_clear(bs_fleet_t* fleet)
+static size_t process_frame(bs_server_t* server, const uint8_t* line, size_t len, char* out)
 {
-    memset(fleet, 0, sizeof(bs_fleet_t));
-    memset(fleet->cell, '.', BS_NUM_CELLS);  // Open waters must be marked with a '.'
+    // A trailing "*HH" means the client wants a checksummed reply, even if
+    // the request itself turns out to be bad.
+    bool has_checksum = (len >= 3) && (line[len - 3] == '*');
+    size_t my_len     = has_checksum ? (len - 3) : len;
+
+    // Invalid bytes, then checksum (a frame containing any byte outside the range 0x20 - 0x7E is rejected).
+    for (size_t i = 0; i < len; ++i)
+        if ((line[i] < 0x20) || (line[i] > 0x7E))
+            return finish_message(out, nack(out, "BADCMD"), has_checksum);
+
+    if (has_checksum)
+    {
+        int hi = hex_value(line[len - 2]);
+        int lo = hex_value(line[len - 1]);
+
+        if ((hi < 0) || (lo < 0) || ((uint8_t)((hi << 4) | lo) != xor_sum(line, my_len)))
+            return finish_message(out, nack(out, "CHECKSUM"), has_checksum);
+    }
+
+    char payload[BS_MAX_REQUEST + 1];
+    memcpy(payload, line, my_len);
+    payload[my_len] = '\0';
+
+    return finish_message(out, dispatch_command(server, payload, out), has_checksum);
 }
 
-static void game_reset(bs_server_t* server)
+static void rx_reset(bs_server_t* server)
 {
-    fleet_clear(&server->fleet[0]);
-    fleet_clear(&server->fleet[1]);
-
-    server->state = BS_IDLE;
-    server->turn  = 0;
+    server->rx_len      = 0;
+    server->rx_overflow = false;
+    server->rx_active   = false;
 }
 
 /**
@@ -580,7 +581,7 @@ size_t bs_server_feed(bs_server_t* server, uint8_t byte, uint32_t now_ms, char* 
 
     size_t reply = 0;
     if (over || (len > BS_MAX_REQUEST))
-        reply = finish(out, nack(out, "TOOLONG"), false);   // Frame exceeded max length
+        reply = finish_message(out, nack(out, "TOOLONG"), false);   // Frame exceeded max length
     else if (len > 0)
         reply = process_frame(server, server->rx_buf, len, out);
 
