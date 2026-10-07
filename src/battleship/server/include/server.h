@@ -91,7 +91,7 @@ void bs_server_init(bs_server_t* server);
  * Reset the server state and move to IDLE when the
  * physical reset button (NRST) is pressed.
  */
-void bs_server_reset(bs_server_t* s);
+void bs_server_reset(bs_server_t* server);
 
 /**
  * Push one received byte.
@@ -106,18 +106,18 @@ void bs_server_reset(bs_server_t* s);
  * At most one reply is produced per call.
 
  */
-size_t bs_server_feed(bs_server_t* s, uint8_t byte, uint32_t now_ms, char* out);
+size_t bs_server_feed(bs_server_t* server, uint8_t byte, uint32_t now_ms, char* out);
 
 /**
  * Get the state of the server for the status LED.
  *
  * @returns The `bs_state_t` of the server.
  */
-bs_state_t bs_server_get_state(const bs_server_t* s);
+bs_state_t bs_server_get_state(const bs_server_t* server);
 
 /**
  * Get which player's turn it is.
  *
  * @returns `0` = P1, `1` = P2.
  */
-uint8_t bs_server_get_turn(const bs_server_t* s);
+uint8_t bs_server_get_turn(const bs_server_t* server);

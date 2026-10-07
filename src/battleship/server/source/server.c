@@ -34,6 +34,89 @@ static size_t nack(char* out, const char* reason)
     return len + put(out + len, reason);
 }
 
+// We need this for payload encoding
+static uint8_t xor_sum(const void *data, size_t len)
+{
+    const uint8_t *p = data;
+    uint8_t x = 0;
+
+    while (len--)
+        x ^= *p++;
+
+    return x;
+}
+
+// Uppercase hex only
+static int hex_value(uint8_t c)
+{
+    if ((c >= '0') && (c <= '9'))
+        return c - '0';
+
+    if ((c >= 'A') && (c <= 'F'))
+        return c - 'A' + 10;
+
+    return -1;
+}
+
+// Encodes the end of a message, optionally including a checksum.
+static size_t finish_message(char* out, size_t len, bool use_checksum)
+{
+    static const char HEX_DIGITS[] = "0123456789ABCDEF";
+
+    if (use_checksum)
+    {
+        uint8_t x = xor_sum(out, len);
+        out[len++] = '*';
+        out[len++] = HEX_DIGITS[x >> 4];
+        out[len++] = HEX_DIGITS[x & 0x0F];
+    }
+
+    out[len++] = '\r';
+    out[len++] = '\n';
+    out[len]   = '\0';
+
+    return len;
+}
+
+/**
+ * Message framing & processing
+ */
+
+static size_t process_frame(bs_server_t* server, const uint8_t* line, size_t len, char* out)
+{
+    // A trailing "*HH" means the client wants a checksummed reply, even if
+    // the request itself turns out to be bad.
+    bool   has_checksum = (len >= 3) && (line[len - 3] == '*');
+    size_t my_len   = has_checksum ? (len - 3) : len;
+
+    // Invalid bytes, then checksum (a frame containing any byte outside the range 0x20 - 0x7E is rejected).
+    for (size_t i = 0; i < len; ++i)
+        if ((line[i] < 0x20) || (line[i] > 0x7E))
+            return finish_message(out, nack(out, "BADCMD"), has_checksum);
+
+    if (has_checksum)
+    {
+        int hi = hex_value(line[len - 2]);
+        int lo = hex_value(line[len - 1]);
+
+        if ((hi < 0) || (lo < 0) || ((uint8_t)((hi << 4) | lo) != xor_sum(line, my_len)))
+            return finish_message(out, nack(out, "CHECKSUM"), has_checksum);
+    }
+
+    char payload[BS_MAX_REQUEST + 1];
+    memcpy(payload, line, my_len);
+    payload[my_len] = '\0';
+
+    return finish_message(out, dispatch(server, payload, out), has_checksum);
+}
+
+static void rx_reset(bs_server_t* server)
+{
+    server->rx_len      = 0;
+    server->rx_overflow = false;
+    server->rx_active   = false;
+}
+
 /**
  * Parsing
  */
@@ -462,15 +545,47 @@ void bs_server_init(bs_server_t* server)
     game_reset(server);
 }
 
-void bs_server_reset(bs_server_t* s)
+void bs_server_reset(bs_server_t* server)
 {
-    game_reset(s);
+    game_reset(server);
 }
 
 // TODO: Implement this!
-size_t bs_server_feed(bs_server_t* s, uint8_t byte, uint32_t now_ms, char* out)
+size_t bs_server_feed(bs_server_t* server, uint8_t byte, uint32_t now_ms, char* out)
 {
-    return 0u;
+    // A partial frame that has been silent for 500 ms is dropped
+    // without a reply. Evaluated lazily when the next byte arrives, which
+    // is indistinguishable from dropping it exactly at 500 ms.
+    if (server->rx_active && ((uint32_t)(now_ms - server->rx_last_ms) >= BS_PARTIAL_TIMEOUT_MS))
+        rx_reset(server);
+
+    server->rx_last_ms = now_ms;
+
+    if (byte != '\n')
+    {
+        server->rx_active = true;
+        if (server->rx_len < sizeof server->rx_buf)
+            server->rx_buf[server->rx_len++] = byte;
+        else
+            server->rx_overflow = true; // Keep discarding up to '\n'
+
+        return 0;
+    }
+
+    // End of line
+    size_t len  = server->rx_len;
+    bool   over = server->rx_overflow;
+    if (!over && (len > 0) && ((server->rx_buf[len - 1] == '\r')))
+        len--;  // "\r\n" terminator
+
+    size_t reply = 0;
+    if (over || (len > BS_MAX_REQUEST))
+        reply = finish(out, nack(out, "TOOLONG"), false);   // Frame exceeded max length
+    else if (len > 0)
+        reply = process_frame(server, server->rx_buf, len, out);
+
+    rx_reset(server);
+    return reply;
 }
 
 bs_state_t bs_server_get_state(const bs_server_t* server)
