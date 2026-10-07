@@ -96,14 +96,13 @@ void bs_server_reset(bs_server_t* server);
 /**
  * Push one received byte.
  *
- * @param `now_ms` a free running millisecond tick (HAL_GetTick()); wraparound is handled.
+ * @param `now_ms` a free running millisecond tick `(HAL_GetTick())`; wraparound is handled.
  *
  * @returns
  * the length of the reply written to `out` (which must be at least
  * `BS_REPLY_BUF` bytes long), or 0 if there is nothing to send. The
- * reply already
- * includes the terminating "\r\n" and is also null-terminated for convenience.
- * At most one reply is produced per call.
+ * reply already includes the terminating "\r\n" and is also
+ * null-terminated for convenience. At most one reply is produced per call.
  */
 size_t bs_server_feed(bs_server_t* server, uint8_t byte, uint32_t now_ms, char* out);
 
