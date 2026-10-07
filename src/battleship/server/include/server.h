@@ -104,7 +104,6 @@ void bs_server_reset(bs_server_t* server);
  * reply already
  * includes the terminating "\r\n" and is also null-terminated for convenience.
  * At most one reply is produced per call.
-
  */
 size_t bs_server_feed(bs_server_t* server, uint8_t byte, uint32_t now_ms, char* out);
 
