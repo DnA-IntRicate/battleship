@@ -12,10 +12,11 @@
 #include <stdint.h>
 
 
-#define BS_MAX_REQUEST          64u                 // bytes, excluding the line terminator
-#define BS_MAX_REPLY            213u
-#define BS_REPLY_BUF            (BS_MAX_REPLY + 3u) // CRLF + NUL
-#define BS_PARTIAL_TIMEOUT_MS   500u
+#define BS_MAX_REQUEST        64u                  // bytes, excluding the line terminator
+#define BS_MAX_REPLY          213u
+#define BS_REPLY_BUF          (BS_MAX_REPLY + 3u)  // CRLF + NUL
+#define BS_PARTIAL_TIMEOUT_MS 500u
+#define BS_NUM_CELLS          100
 
 /**
  * Enum of all possible game states.
@@ -41,10 +42,10 @@ typedef enum bs_state_t
 typedef struct bs_fleet_t
 {
     // Ship letter (C, B, R, S, D) or '.' for empty water.
-    char cell[100];
+    char cell[BS_NUM_CELLS];
 
     // Tracks which cells the opponent has fired on.
-    uint8_t shot[100];
+    uint8_t shot[BS_NUM_CELLS];
 
     // Tracks which cells contain ships.
     uint8_t placed_mask;
@@ -74,9 +75,49 @@ typedef struct bs_server_t
     bool session;
 
     // UART framing
-    uint8_t    rx_buf[BS_MAX_REQUEST + 1];  // One extra byte for a trailing '\r'.
-    uint8_t    rx_len;
-    bool       rx_overflow;
-    bool       rx_active;                   // Tracks if a frame is partially received.
-    uint32_t   rx_last_ms;
+    uint8_t rx_buf[BS_MAX_REQUEST + 1];  // One extra byte for a trailing '\r'.
+    uint8_t rx_len;
+    bool rx_overflow;
+    bool rx_active;                      // Tracks if a frame is partially received.
+    uint32_t rx_last_ms;
 } bs_server_t;
+
+/**
+ * Initializes the server state.
+ */
+void bs_server_init(bs_server_t* server);
+
+/**
+ * Reset the server state and move to IDLE when the
+ * physical reset button (NRST) is pressed.
+ */
+void bs_server_reset(bs_server_t* s);
+
+/**
+ * Push one received byte.
+ *
+ * @param `now_ms` a free running millisecond tick (HAL_GetTick()); wraparound is handled.
+ *
+ * @returns
+ * the length of the reply written to `out` (which must be at least
+ * `BS_REPLY_BUF` bytes long), or 0 if there is nothing to send. The
+ * reply already
+ * includes the terminating "\r\n" and is also null-terminated for convenience.
+ * At most one reply is produced per call.
+
+ */
+size_t bs_server_feed(bs_server_t* s, uint8_t byte, uint32_t now_ms, char* out);
+
+/**
+ * Get the state of the server for the status LED.
+ *
+ * @returns The `bs_state_t` of the server.
+ */
+bs_state_t bs_server_get_state(const bs_server_t* s);
+
+/**
+ * Get which player's turn it is.
+ *
+ * @returns `0` = P1, `1` = P2.
+ */
+uint8_t bs_server_get_turn(const bs_server_t* s);
