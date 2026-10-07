@@ -16,6 +16,23 @@
 static const char SHIP_CHAR[BS_NUM_SHIPS]   = { 'C', 'B', 'R', 'S', 'D' };
 static const uint8_t SHIP_LEN[BS_NUM_SHIPS] = { 5, 4, 3, 3, 2 };
 
+/**
+ * Helpers
+ */
+
+static size_t put(char* out, const char* str)
+{
+    size_t len = strlen(str);
+    memcpy(out, str, len);
+
+    return len;
+}
+
+static size_t nack(char* out, const char* reason)
+{
+    size_t len = put(out, "NACK:");
+    return len + put(out + len, reason);
+}
 
 /**
  * Parsing
