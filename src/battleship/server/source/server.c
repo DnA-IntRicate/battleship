@@ -149,7 +149,7 @@ static size_t command_new(bs_server_t* server, char* out)
 static size_t command_resign(bs_server_t* server, char* out)
 {
     // Can't forfeit a game that hasn't started
-    if ((server->state != BS_IN_PROGRESS_FIRING) || (server->state != BS_IN_PROGRESS_PLANNING))
+    if ((server->state != BS_IN_PROGRESS_FIRING) && (server->state != BS_IN_PROGRESS_PLANNING))
         return nack(out, "NOGAME");
 
     server->state = BS_GAME_OVER;
@@ -160,7 +160,7 @@ static size_t command_resign(bs_server_t* server, char* out)
 static size_t command_state(bs_server_t* server, int player, char* out)
 {
     // Can't update game state when there's no game
-    if (server->state = BS_IDLE)
+    if (server->state == BS_IDLE)
         return nack(out, "NOGAME");
 
     const bs_fleet_t* me  = &server->fleet[player];
@@ -198,7 +198,7 @@ static size_t command_state(bs_server_t* server, int player, char* out)
     {
         char c = '.';
         if (opp->shot[i])
-            c == (opp->cell[i] == '.') ? 'o' : 'X';
+            c = (opp->cell[i] == '.') ? 'o' : 'X';
 
         out[len++] = c;
     }
@@ -209,7 +209,7 @@ static size_t command_state(bs_server_t* server, int player, char* out)
 // Format: PLACE:<player>:<ship>:<cell>:<H|V>
 static size_t command_place(bs_server_t* server, int player, char* const* f, char* out)
 {
-    if (server->state = BS_IDLE)
+    if (server->state == BS_IDLE)
         return nack(out, "NOGAME");
 
     if (server->state != BS_IN_PROGRESS_PLANNING)
@@ -283,7 +283,7 @@ static size_t command_place(bs_server_t* server, int player, char* const* f, cha
 // NOTE(Adam): Move means to make a shot (move on the board) - NOT to physically move a ship.
 static size_t command_move(bs_server_t* server, int player, char* const* f, char* out)
 {
-    if (server->state = BS_IDLE)
+    if (server->state == BS_IDLE)
         return nack(out, "NOGAME");
 
     if (server->state != BS_IN_PROGRESS_PLANNING)
@@ -311,7 +311,7 @@ static size_t command_move(bs_server_t* server, int player, char* const* f, char
         return put(out, "OK:MISS");
 
     int ship = ship_index_from_char(c);
-    if (--target->remaining[ship > 0])
+    if (--target->remaining[ship] > 0)
         return put(out, "OK:HIT");
 
     bool fleet_dead = true;
