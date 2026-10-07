@@ -113,6 +113,228 @@ static cell_result_t parse_cell(const char* str, uint8_t* out_index)
 }
 
 /**
+ * Game logic and command handlers.
+ */
+
+static size_t command_connect(bs_server_t* server, char* out)
+{
+    server->session = true;
+    return put(out, "OK");
+}
+
+static size_t command_disconnect(bs_server_t* server, char* out)
+{
+    // Don't disconnect while the game is in progress
+    if ((server->state == BS_IN_PROGRESS_FIRING) || (server->state == BS_IN_PROGRESS_PLANNING))
+        return nack(out, "BADSTATE");
+
+    game_reset(server);
+    server->session = false;
+
+    return put(out, "OK");
+}
+
+static size_t command_new(bs_server_t* server, char* out)
+{
+    // Don't start a new game while one is already in-progress
+    if ((server->state == BS_IN_PROGRESS_FIRING) || (server->state == BS_IN_PROGRESS_PLANNING))
+        return nack(out, "BADSTATE");
+
+    game_reset(server);
+    server->state = BS_IN_PROGRESS_PLANNING;
+
+    return put(out, "OK:PLACE");
+}
+
+static size_t command_resign(bs_server_t* server, char* out)
+{
+    // Can't forfeit a game that hasn't started
+    if ((server->state != BS_IN_PROGRESS_FIRING) || (server->state != BS_IN_PROGRESS_PLANNING))
+        return nack(out, "NOGAME");
+
+    server->state = BS_GAME_OVER;
+    return put(out, "OK:GAMEOVER");
+}
+
+// Format: BOARD:<turn>:<own>:<target>
+static size_t command_state(bs_server_t* server, int player, char* out)
+{
+    // Can't update game state when there's no game
+    if (server->state = BS_IDLE)
+        return nack(out, "NOGAME");
+
+    const bs_fleet_t* me  = &server->fleet[player];
+    const bs_fleet_t* opp = &server->fleet[1 - player];
+    size_t len            = put(out, "BOARD:");
+
+    if (server->state == BS_GAME_OVER)
+    {
+        out[len++] = '-';
+        out[len++] = '-';
+    }
+    else
+    {
+        // <turn>
+        out[len++] = 'P';
+        out[len++] = (char)('1' + server->turn);
+    }
+
+    out[len++] = ':';
+
+    // <own>: Ship letters, 'X' where the opp hit, 'o' where it missed.
+    for (int i = 0; i < BS_NUM_CELLS; ++i)
+    {
+        char c = me->cell[i];
+        if (me->shot[i])
+            c = (c == '.') ? 'o' : 'X';
+
+        out[len++] = c;
+    }
+
+    out[len++] = ':';
+
+    // <target>: What this player's shots have revealed.
+    for (int i = 0; i < BS_NUM_CELLS; ++i)
+    {
+        char c = '.';
+        if (opp->shot[i])
+            c == (opp->cell[i] == '.') ? 'o' : 'X';
+
+        out[len++] = c;
+    }
+
+    return len;
+}
+
+// Format: PLACE:<player>:<ship>:<cell>:<H|V>
+static size_t command_place(bs_server_t* server, int player, char* const* f, char* out)
+{
+    if (server->state = BS_IDLE)
+        return nack(out, "NOGAME");
+
+    if (server->state != BS_IN_PROGRESS_PLANNING)
+        return nack(out, "BADSTATE");
+
+    if (player != server->turn)
+        return nack(out, "NOTURN");
+
+    // Validate the field values
+    char orientation = f[4][0];
+    if ((f[4][1] != '\0') || ((orientation != 'H') && (orientation != 'V')))
+        return nack(out, "BADCMD");
+
+    uint8_t bow      = 0;
+    cell_result_t cr = parse_cell(f[3], &bow);
+    if (cr != CELL_OK)
+        return nack(out, (cr == CELL_BAD) ? "BADCMD" : "RANGE");
+
+    // Validate the ship index/char
+    int ship = parse_ship(f[3]);
+    if (ship < 0)
+        return nack(out, "BADSHIP");
+
+    // Validate duplicate ship
+    bs_fleet_t* fleet = &server->fleet[player];
+    if (fleet->placed_mask & (1 << ship))
+        return nack(out, "DUPSHIP");
+
+    // Extract the ship coordinates
+    uint32_t len    = SHIP_LEN[ship];
+    bool horizontal = (orientation == 'H');
+    uint32_t row    = bow / 10;
+    uint32_t col    = bow % 10;
+
+    if (horizontal ? (col + len > 10) : (row + len > 10))
+        return nack(out, "RANGE");
+
+    // Handle overlapping ships
+    uint32_t step = horizontal ? 1 : 10;
+    for (uint32_t i = 0; i < len; ++i)
+        if (fleet->cell[bow + i * step] != '.')
+            return nack(out, "OVERLAP");
+
+    // Commit a valid ship placement
+    for (uint32_t i = 0; i < len; ++i)
+        fleet->cell[bow + i * step] = SHIP_CHAR[ship];
+
+    fleet->remaining[ship]  = (uint8_t)len;
+    fleet->placed_mask     |= (uint8_t)(1 << ship);
+    ++fleet->placed_count;
+
+    if (fleet->placed_count == BS_NUM_SHIPS)
+    {
+        // Move to P2
+        if (player == 0)
+            server->turn = 1;
+        else
+        {
+            // Enter firing phase
+            server->state = BS_IN_PROGRESS_FIRING;
+            server->turn  = 0;
+
+            return put(out, "OK:READY");
+        }
+    }
+
+    return put(out, "OK:PLACED");
+}
+
+// Format: MOVE:<player>:<cell>
+// NOTE(Adam): Move means to make a shot (move on the board) - NOT to physically move a ship.
+static size_t command_move(bs_server_t* server, int player, char* const* f, char* out)
+{
+    if (server->state = BS_IDLE)
+        return nack(out, "NOGAME");
+
+    if (server->state != BS_IN_PROGRESS_PLANNING)
+        return nack(out, "BADSTATE");
+
+    if (player != server->turn)
+        return nack(out, "NOTURN");
+
+    uint8_t idx      = 0;
+    cell_result_t cr = parse_cell(f[2], &idx);
+    if (cr != CELL_OK)
+        return nack(out, (cr == CELL_BAD) ? "BADCMD" : "RANGE");
+
+    bs_fleet_t* target = &server->fleet[1 - player];
+    if (target->shot[idx])
+        return nack(out, "OCCUPIED");  // The player has already fired on this cell
+
+    // Commit a valid shot/move and rotate to the next player
+    target->shot[idx] = 1;
+    char c            = target->cell[idx];
+    server->turn      = (uint8_t)(1 - player);
+
+    // Shot landed in open waters
+    if (c == '.')
+        return put(out, "OK:MISS");
+
+    int ship = ship_index_from_char(c);
+    if (--target->remaining[ship > 0])
+        return put(out, "OK:HIT");
+
+    bool fleet_dead = true;
+    for (int i = 0; i < BS_NUM_SHIPS; ++i)
+        if (target->remaining[i] != 0)
+            fleet_dead = false;
+
+    if (fleet_dead)
+    {
+        server->state = BS_GAME_OVER;
+        size_t len    = put(out, "WIN:P");
+        out[len++]    = (char)('1' + player);
+
+        return len;
+    }
+
+    size_t len = put(out, "OK:SUNK");
+    out[len++] = SHIP_CHAR[ship];
+
+    return len;
+}
+
+/**
  * Game state
  */
 
