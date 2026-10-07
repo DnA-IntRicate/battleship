@@ -94,6 +94,7 @@ src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart.c \
 src/battleship/server/drivers/STM32F0xx_HAL_Driver/Src/stm32f0xx_hal_uart_ex.c \
 src/battleship/server/source/lcd_stm32f0.c \
 src/battleship/server/source/main.c \
+src/battleship/server/source/server.c \
 src/battleship/server/source/stm32f0xx_hal_msp.c \
 src/battleship/server/source/stm32f0xx_it.c \
 src/battleship/server/source/syscalls.c \
