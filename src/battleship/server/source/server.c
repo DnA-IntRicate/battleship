@@ -35,10 +35,10 @@ static size_t nack(char* out, const char* reason)
 }
 
 // We need this for payload encoding
-static uint8_t xor_sum(const void *data, size_t len)
+static uint8_t xor_sum(const void* data, size_t len)
 {
-    const uint8_t *p = data;
-    uint8_t x = 0;
+    const uint8_t* p = data;
+    uint8_t x        = 0;
 
     while (len--)
         x ^= *p++;
@@ -65,7 +65,7 @@ static size_t finish_message(char* out, size_t len, bool use_checksum)
 
     if (use_checksum)
     {
-        uint8_t x = xor_sum(out, len);
+        uint8_t x  = xor_sum(out, len);
         out[len++] = '*';
         out[len++] = HEX_DIGITS[x >> 4];
         out[len++] = HEX_DIGITS[x & 0x0F];
@@ -425,13 +425,13 @@ static const struct
     bool has_player;
 
 } COMMANDS[CMD_COUNT] = {
-    [CMD_CONNECT]    = { "CONNECT",     1, false },
-    [CMD_NEW]        = { "NEW",         1, false },
-    [CMD_PLACE]      = { "PLACE",       5, true  },
-    [CMD_MOVE]       = { "MOVE",        3, true  },
-    [CMD_STATE]      = { "STATE",       2, true  },
-    [CMD_RESIGN]     = { "RESIGN",      2, true  },
-    [CMD_DISCONNECT] = { "DISCONNECT",  1, false }
+    [CMD_CONNECT]    = { "CONNECT",    1, false },
+    [CMD_NEW]        = { "NEW",        1, false },
+    [CMD_PLACE]      = { "PLACE",      5, true  },
+    [CMD_MOVE]       = { "MOVE",       3, true  },
+    [CMD_STATE]      = { "STATE",      2, true  },
+    [CMD_RESIGN]     = { "RESIGN",     2, true  },
+    [CMD_DISCONNECT] = { "DISCONNECT", 1, false }
 };
 
 // Splits `str` in-place on ':'.
@@ -551,7 +551,6 @@ void bs_server_reset(bs_server_t* server)
     game_reset(server);
 }
 
-// TODO: Implement this!
 size_t bs_server_feed(bs_server_t* server, uint8_t byte, uint32_t now_ms, char* out)
 {
     // A partial frame that has been silent for 500 ms is dropped
@@ -568,20 +567,20 @@ size_t bs_server_feed(bs_server_t* server, uint8_t byte, uint32_t now_ms, char* 
         if (server->rx_len < sizeof server->rx_buf)
             server->rx_buf[server->rx_len++] = byte;
         else
-            server->rx_overflow = true; // Keep discarding up to '\n'
+            server->rx_overflow = true;  // Keep discarding up to '\n'
 
         return 0;
     }
 
     // End of line
-    size_t len  = server->rx_len;
-    bool   over = server->rx_overflow;
+    size_t len = server->rx_len;
+    bool over  = server->rx_overflow;
     if (!over && (len > 0) && ((server->rx_buf[len - 1] == '\r')))
         len--;  // "\r\n" terminator
 
     size_t reply = 0;
     if (over || (len > BS_MAX_REQUEST))
-        reply = finish_message(out, nack(out, "TOOLONG"), false);   // Frame exceeded max length
+        reply = finish_message(out, nack(out, "TOOLONG"), false);  // Frame exceeded max length
     else if (len > 0)
         reply = process_frame(server, server->rx_buf, len, out);
 
