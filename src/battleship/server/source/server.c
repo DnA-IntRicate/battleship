@@ -335,6 +335,105 @@ static size_t command_move(bs_server_t* server, int player, char* const* f, char
 }
 
 /**
+ * Command dispatching
+ */
+
+typedef enum cmd_t
+{
+    CMD_CONNECT,
+    CMD_NEW,
+    CMD_PLACE,
+    CMD_MOVE,
+    CMD_STATE,
+    CMD_RESIGN,
+    CMD_DISCONNECT,
+    CMD_COUNT
+} cmd_t;
+
+static const struct
+{
+    // The name of the command
+    const char* name;
+
+    // The number of fields in the command (including the command name)
+    uint8_t fields;
+
+    // Field 1 is <player>
+    bool has_player;
+
+} COMMANDS[CMD_COUNT] = {
+    [CMD_CONNECT]    = { "CONNECT",     1, false },
+    [CMD_NEW]        = { "NEW",         1, false },
+    [CMD_PLACE]      = { "PLACE",       5, true  },
+    [CMD_MOVE]       = { "MOVE",        3, true  },
+    [CMD_STATE]      = { "STATE",       2, true  },
+    [CMD_RESIGN]     = { "RESIGN",      2, true  },
+    [CMD_DISCONNECT] = { "DISCONNECT",  1, false }
+};
+
+// Splits `str` in-place on ':'.
+// Returns the field count, or `MAX + 1` if there are more than `max` fields.
+static int split_fields(char* str, char** fields, int max)
+{
+    int count = 0;
+    char* p   = str;
+
+    while (count < max)
+    {
+        fields[count++] = p;
+        while (*p && (*p != ':'))
+            ++p;
+
+        if (*p == '\0')
+            return count;
+
+        *p++ = '\0';
+    }
+
+    // There may be another field after max
+    return (*p) ? (max + 1) : count;
+}
+
+static size_t dispatch_command(bs_server_t* server, char* payload, char* out)
+{
+    char* fields[BS_MAX_FIELDS];
+    int field_count = split_fields(payload, fields, BS_MAX_FIELDS);
+
+    int c;
+    for (c = 0; c < CMD_COUNT; ++c)
+        if (strcmp(fields[0], COMMANDS[c].name) == 0)
+            break;
+
+    if ((c == CMD_COUNT || (field_count != COMMANDS[c].fields)))
+        return nack(out, "BADCMD");
+
+    int player = -1;
+    if (COMMANDS[c].has_player)
+    {
+        player = parse_player(fields[1]);
+        if (player < 0)
+            return nack(out, "BADCMD");
+    }
+
+    // Cannot dispatch a game command without an active session
+    if ((c != CMD_CONNECT) && !server->session)
+        return nack(out, "NOSESSION");
+
+    switch ((cmd_t)c)
+    {
+        case CMD_CONNECT:    return command_connect(server, out);
+        case CMD_NEW:        return command_new(server, out);
+        case CMD_PLACE:      return command_place(server, player, fields, out);
+        case CMD_MOVE:       return command_move(server, player, fields, out);
+        case CMD_STATE:      return command_state(server, player, out);
+        case CMD_RESIGN:     return command_resign(server, out);
+        case CMD_DISCONNECT: return command_disconnect(server, out);
+    }
+
+    return nack(out, "BADCMD");
+}
+
+/**
  * Game state
  */
 
