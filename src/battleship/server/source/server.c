@@ -103,13 +103,7 @@ static int ship_index_from_char(char c)
 // str must be one of: { 'C', 'B', 'R', 'S', 'D' }
 static int parse_ship(const char* str)
 {
-    if (!str)
-        return -1;
-
-    if (strlen(str) > 2)
-        return -1;
-
-    if (str[0] == '\0')
+    if (!str || (str[0] == '\0') || (str[1] != '\0'))
         return -1;
 
     return ship_index_from_char(str[0]);
