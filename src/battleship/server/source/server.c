@@ -292,7 +292,7 @@ static size_t command_place(bs_server_t* server, int player, char* const* f, cha
         return nack(out, (cr == CELL_BAD) ? "BADCMD" : "RANGE");
 
     // Validate the ship index/char
-    int ship = parse_ship(f[3]);
+    int ship = parse_ship(f[2]);
     if (ship < 0)
         return nack(out, "BADSHIP");
 
