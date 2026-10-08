@@ -349,8 +349,8 @@ static size_t command_move(bs_server_t* server, int player, char* const* f, char
     if (server->state == BS_IDLE)
         return nack(out, "NOGAME");
 
-    if (server->state != BS_IN_PROGRESS_PLANNING)
-        return nack(out, "BADSTATE");
+    if (server->state == BS_IN_PROGRESS_PLANNING)
+        return nack(out, "NOTREADY");
 
     if (player != server->turn)
         return nack(out, "NOTURN");
@@ -391,7 +391,7 @@ static size_t command_move(bs_server_t* server, int player, char* const* f, char
         return len;
     }
 
-    size_t len = put(out, "OK:SUNK");
+    size_t len = put(out, "OK:SUNK:");
     out[len++] = SHIP_CHAR[ship];
 
     return len;
