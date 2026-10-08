@@ -447,8 +447,7 @@ static int split_fields(char* str, char** fields, int max)
         *p++ = '\0';
     }
 
-    // There may be another field after max
-    return (*p) ? (max + 1) : count;
+    return max + 1;
 }
 
 static size_t dispatch_command(bs_server_t* server, char* payload, char* out)
