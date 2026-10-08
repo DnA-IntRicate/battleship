@@ -47,7 +47,7 @@ typedef struct bs_fleet_t
     // Tracks which cells the opponent has fired on.
     uint8_t shot[BS_NUM_CELLS];
 
-    // Tracks which cells contain ships.
+    // Bit i set means ship i has been placed (C B R S D); does not track where.
     uint8_t placed_mask;
 
     // The number of ship placements.
