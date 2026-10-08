@@ -272,7 +272,7 @@ static size_t command_state(bs_server_t* server, int player, char* out)
 // Format: PLACE:<player>:<ship>:<cell>:<H|V>
 static size_t command_place(bs_server_t* server, int player, char* const* f, char* out)
 {
-    if (server->state == BS_IDLE)
+    if ((server->state == BS_IDLE) || (server->state == BS_GAME_OVER))
         return nack(out, "NOGAME");
 
     if (server->state != BS_IN_PROGRESS_PLANNING)
@@ -346,7 +346,7 @@ static size_t command_place(bs_server_t* server, int player, char* const* f, cha
 // NOTE(Adam): Move means to make a shot (move on the board) - NOT to physically move a ship.
 static size_t command_move(bs_server_t* server, int player, char* const* f, char* out)
 {
-    if (server->state == BS_IDLE)
+    if ((server->state == BS_IDLE) || (server->state == BS_GAME_OVER))
         return nack(out, "NOGAME");
 
     if (server->state == BS_IN_PROGRESS_PLANNING)
