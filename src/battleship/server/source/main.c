@@ -6,20 +6,36 @@
 
 
 // LED port/pin arrays for easy indexing
-const uint8_t LED_COUNT = 8;
+const uint8_t LED_COUNT      = 8;
 GPIO_TypeDef* g_led_ports[8] = { GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB };
 uint16_t g_led_pins[8]       = { GPIO_PIN_0, GPIO_PIN_1, GPIO_PIN_2, GPIO_PIN_3, GPIO_PIN_4, GPIO_PIN_5, GPIO_PIN_6, GPIO_PIN_7 };
 
 bs_server_t g_server;
-UART_HandleTypeDef g_huart1;
 
+// UART state
+struct uart_state_t
+{
+    UART_HandleTypeDef huart1;
+    uint8_t rx_byte;
+
+    volatile uint8_t tx_ready;
+    size_t tx_len;
+    char tx_buf[BS_MAX_REPLY];
+} g_uart_state;
+
+// Hardware initalization
 static void syclk_config(void);
 static void gpio_init(void);
 static void usart1_uart_init(void);
 static void startup_anim(void);
 
+// Helpers
 static void set_leds(uint8_t mask);
 static void clear_leds(void);
+
+// Server & message handling
+static void recv(void);
+static void send(void);
 
 /**
   * @brief  The application entry point.
@@ -43,30 +59,28 @@ int main(void)
     // Initialize server state
     bs_server_init(&g_server);
 
-    uint8_t counter = 0;
+    // Begin receive loop (interrupt mode)
+    g_uart_state.tx_ready = 0;
+    recv();
+
     while (1)
     {
-        // Ok so, we're gonna need a message builder or something
-        // Strings in C, yay!
-        // I wonder what happens on a nullptr dereference on the STM
-        char message[64];
-        int len = snprintf(message, sizeof(message), "Battleship broadcast from server %d!\r\n", counter++);
-        if (len >= (int)sizeof(message))
-            len = sizeof(message) - 1;  // Truncate
+        // Handle reply transmission
+        if (g_uart_state.tx_ready)
+        {
+            // Transmit reply
+            send();
+            g_uart_state.tx_ready = 0;
 
-        HAL_UART_Transmit(&g_huart1, (uint8_t*)message, (uint16_t)len, HAL_MAX_DELAY);
-
-        // HAL_Delay(1000);
+            // Resume reception after a reply has been sent
+            recv();
+        }
     }
 
     // Cleanup
     bs_server_reset(&g_server);
 }
 
-/**
-  * @brief System Clock Configuration
-  * @retval None
-  */
 static void syclk_config(void)
 {
     RCC_OscInitTypeDef RCC_OscInitStruct   = {};
@@ -98,11 +112,6 @@ static void syclk_config(void)
         err_handler();
 }
 
-/**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
 static void gpio_init(void)
 {
     // Enable GPIO clocks
@@ -127,26 +136,54 @@ static void gpio_init(void)
     }
 }
 
-/**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
 static void usart1_uart_init(void)
 {
-    g_huart1.Instance                    = USART1;
-    g_huart1.Init.BaudRate               = 115200;
-    g_huart1.Init.WordLength             = UART_WORDLENGTH_8B;
-    g_huart1.Init.StopBits               = UART_STOPBITS_1;
-    g_huart1.Init.Parity                 = UART_PARITY_NONE;
-    g_huart1.Init.Mode                   = UART_MODE_TX_RX;
-    g_huart1.Init.HwFlowCtl              = UART_HWCONTROL_NONE;
-    g_huart1.Init.OverSampling           = UART_OVERSAMPLING_16;
-    g_huart1.Init.OneBitSampling         = UART_ONE_BIT_SAMPLE_DISABLE;
-    g_huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+    g_uart_state.huart1.Instance                    = USART1;
+    g_uart_state.huart1.Init.BaudRate               = 115200;
+    g_uart_state.huart1.Init.WordLength             = UART_WORDLENGTH_8B;
+    g_uart_state.huart1.Init.StopBits               = UART_STOPBITS_1;
+    g_uart_state.huart1.Init.Parity                 = UART_PARITY_NONE;
+    g_uart_state.huart1.Init.Mode                   = UART_MODE_TX_RX;
+    g_uart_state.huart1.Init.HwFlowCtl              = UART_HWCONTROL_NONE;
+    g_uart_state.huart1.Init.OverSampling           = UART_OVERSAMPLING_16;
+    g_uart_state.huart1.Init.OneBitSampling         = UART_ONE_BIT_SAMPLE_DISABLE;
+    g_uart_state.huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
 
-    if (HAL_UART_Init(&g_huart1) != HAL_OK)
+    if (HAL_UART_Init(&g_uart_state.huart1) != HAL_OK)
         err_handler();
+
+    // Enable interrupts
+    NVIC_EnableIRQ(USART1_IRQn);
+}
+
+// Override the UART rx callback
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart)
+{
+    if (huart->Instance != USART1)
+        return;
+
+    const size_t len = bs_server_feed(&g_server, g_uart_state.rx_byte, HAL_GetTick(), g_uart_state.tx_buf);
+    if (len > 0)
+    {
+        // Handle invalid reply lengths
+        if ((len > sizeof(g_uart_state.tx_buf)) || (len > UINT16_MAX))
+            err_handler();
+
+        g_uart_state.tx_len   = len;
+        g_uart_state.tx_ready = 1;
+
+        // Pause reception until the main loop transmits the reply
+        return;
+    }
+
+    // The frame is incomplete, so receive the next byte
+    recv();
+}
+
+// Override the UART interrupt handler
+void USART1_IRQHandler(void)
+{
+    HAL_UART_IRQHandler(&g_uart_state.huart1);
 }
 
 static void startup_anim(void)
@@ -184,12 +221,29 @@ static void clear_leds(void)
     set_leds(0);
 }
 
+static void recv(void)
+{
+    if (HAL_UART_Receive_IT(&g_uart_state.huart1, &g_uart_state.rx_byte, 1) != HAL_OK)
+        err_handler();
+}
+
+static void send(void)
+{
+    const uint16_t len  = (uint16_t)g_uart_state.tx_len;
+    const uint8_t* data = (uint8_t*)g_uart_state.tx_buf;
+
+    if (HAL_UART_Transmit(&g_uart_state.huart1, data, len, HAL_MAX_DELAY) != HAL_OK)
+        err_handler();
+}
+
 /**
   * @brief  This function is executed in case of error occurrence.
   * @retval None
   */
 void err_handler(void)
 {
+    // TODO(Adam): Transmit a catastrophic error message back to the client here
+
     __disable_irq();
     while (1)
     {
