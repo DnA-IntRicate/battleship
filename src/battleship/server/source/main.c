@@ -1,9 +1,10 @@
 #include <main.h>
+#include <server.h>
 #include <lcd_stm32f0.h>
 #include <stdio.h>
 #include <string.h>
 
-
+bs_server_t server;
 UART_HandleTypeDef huart1;
 
 static void syclk_config(void);
@@ -33,6 +34,9 @@ int main(void)
     gpio_init();
     usart1_uart_init();
 
+    // Initialize server state
+    bs_server_init(&server);
+
     uint8_t counter = 0;
     while (1)
     {
@@ -48,6 +52,9 @@ int main(void)
 
         // HAL_Delay(1000);
     }
+
+    // Cleanup
+    bs_server_reset(&server);
 }
 
 /**
