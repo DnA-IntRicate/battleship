@@ -13,6 +13,8 @@ uint16_t g_led_pins[10]       = {
 };
 
 bs_server_t g_server;
+bs_state_t g_prev_state;
+uint8_t g_prev_turn;
 
 // UART state
 struct uart_state_t
@@ -32,9 +34,11 @@ static void usart1_uart_init(void);
 static void startup_anim(void);
 
 // Helpers
+static void splashscreen(void);
 static void set_leds(uint8_t mask);
 static void clear_leds(void);
 static void status_led(bs_state_t state);
+static void status_lcd(bs_state_t state, uint8_t turn);
 
 // Server & message handling
 static void recv(void);
@@ -66,6 +70,11 @@ int main(void)
     g_uart_state.tx_ready = 0;
     recv();
 
+    // Set initial state
+    g_prev_state = bs_server_get_state(&g_server);
+    g_prev_turn  = bs_server_get_turn(&g_server);
+    status_led(g_prev_state);
+
     while (1)
     {
         // Handle reply transmission
@@ -79,7 +88,17 @@ int main(void)
             recv();
         }
 
-        status_led(bs_server_get_state(&g_server));
+        bs_state_t state = bs_server_get_state(&g_server);
+        uint8_t turn     = bs_server_get_turn(&g_server);
+
+        if ((state != g_prev_state) || (turn != g_prev_turn))
+        {
+            status_led(state);
+            status_lcd(state, turn);
+
+            g_prev_state = state;
+            g_prev_turn  = turn;
+        }
     }
 }
 
@@ -190,10 +209,7 @@ void USART1_IRQHandler(void)
 
 static void startup_anim(void)
 {
-    // Splash screen
-    lcd_putstring("Welcome to");
-    lcd_command(LINE_TWO);
-    lcd_putstring("BATTLESHIP!");
+    splashscreen();
 
     // Rolling LED startup animation
     for (int i = 0; i < LED_COUNT; ++i)
@@ -211,6 +227,14 @@ static void startup_anim(void)
     clear_leds();
     HAL_Delay(100);
     set_leds(0xFF);
+}
+
+static void splashscreen(void)
+{
+    lcd_command(CLEAR);
+    lcd_putstring("Welcome to");
+    lcd_command(LINE_TWO);
+    lcd_putstring("BATTLESHIP!");
 }
 
 static void set_leds(uint8_t mask)
@@ -237,10 +261,49 @@ static void status_led(bs_state_t state)
     // PB10 = Red; PB11 = Green
     switch (state)
     {
-        case BS_IDLE:                 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_11, SET); return;
-        case BS_IN_PROGRESS_PLANNING: HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10 | GPIO_PIN_11, SET); return;
-        case BS_IN_PROGRESS_FIRING:   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, SET); return;
-        case BS_GAME_OVER:            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10 | GPIO_PIN_11, RESET); return;
+        case BS_IDLE:                 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_11, SET); break;
+        case BS_IN_PROGRESS_PLANNING: HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10 | GPIO_PIN_11, SET); break;
+        case BS_IN_PROGRESS_FIRING:   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, SET); break;
+        case BS_GAME_OVER:            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10 | GPIO_PIN_11, RESET); break;
+    }
+}
+
+static void status_lcd(bs_state_t state, uint8_t turn)
+{
+    switch (state)
+    {
+        case BS_IDLE: splashscreen(); break;
+        case BS_IN_PROGRESS_PLANNING:
+        {
+            lcd_command(CLEAR);
+            lcd_putstring("Planning phase");
+            lcd_command(LINE_TWO);
+
+            char message[16];
+            snprintf(message, sizeof(message), "Turn: P%d.", turn + 1);
+            lcd_putstring(message);
+
+            break;
+        }
+        case BS_IN_PROGRESS_FIRING:
+        {
+            lcd_command(CLEAR);
+            lcd_putstring("Firing phase");
+            lcd_command(LINE_TWO);
+
+            char message[16];
+            snprintf(message, sizeof(message), "Turn: P%d.", turn + 1);
+            lcd_putstring(message);
+
+            break;
+        }
+        case BS_GAME_OVER:
+        {
+            lcd_command(CLEAR);
+            lcd_putstring("GAME OVER!");
+
+            break;
+        }
     }
 }
 
