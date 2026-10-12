@@ -6,9 +6,8 @@
 
 
 // LED port/pin arrays for easy indexing
-const uint8_t LED_COUNT       = 10;
-GPIO_TypeDef* g_led_ports[10] = { GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB };
-uint16_t g_led_pins[10]       = {
+const uint8_t LED_COUNT = 10;
+uint16_t g_led_pins[10] = {
     GPIO_PIN_0, GPIO_PIN_1, GPIO_PIN_2, GPIO_PIN_3, GPIO_PIN_4, GPIO_PIN_5, GPIO_PIN_6, GPIO_PIN_7, GPIO_PIN_10, GPIO_PIN_11
 };
 
@@ -153,7 +152,7 @@ static void gpio_init(void)
     for (uint8_t i = 0; i < LED_COUNT; ++i)
     {
         gpio_init_struct.Pin = g_led_pins[i];
-        HAL_GPIO_Init(g_led_ports[i], &gpio_init_struct);
+        HAL_GPIO_Init(GPIOB, &gpio_init_struct);
     }
 }
 
