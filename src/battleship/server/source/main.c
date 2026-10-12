@@ -76,9 +76,6 @@ int main(void)
             recv();
         }
     }
-
-    // Cleanup
-    bs_server_reset(&g_server);
 }
 
 static void syclk_config(void)
