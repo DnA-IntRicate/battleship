@@ -39,7 +39,7 @@ clean = "make -j6 DEBUG=1 -f STM32Make.make clean"
 flash = "make -j6 DEBUG=1 -f STM32Make.Make flash"
 client = "uv run battleship-client"
 ports = "python -m scripts.ports"
-settle = "python -c \"import time; time.sleep(1)\""
+settle = "python -c \"import time; time.sleep(0.25)\""
 
 up = [
   { ref = "build" },
