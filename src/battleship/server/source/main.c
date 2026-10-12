@@ -6,9 +6,11 @@
 
 
 // LED port/pin arrays for easy indexing
-const uint8_t LED_COUNT      = 8;
-GPIO_TypeDef* g_led_ports[8] = { GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB };
-uint16_t g_led_pins[8]       = { GPIO_PIN_0, GPIO_PIN_1, GPIO_PIN_2, GPIO_PIN_3, GPIO_PIN_4, GPIO_PIN_5, GPIO_PIN_6, GPIO_PIN_7 };
+const uint8_t LED_COUNT       = 10;
+GPIO_TypeDef* g_led_ports[10] = { GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB, GPIOB };
+uint16_t g_led_pins[10]       = {
+    GPIO_PIN_0, GPIO_PIN_1, GPIO_PIN_2, GPIO_PIN_3, GPIO_PIN_4, GPIO_PIN_5, GPIO_PIN_6, GPIO_PIN_7, GPIO_PIN_10, GPIO_PIN_11
+};
 
 bs_server_t g_server;
 
@@ -32,6 +34,7 @@ static void startup_anim(void);
 // Helpers
 static void set_leds(uint8_t mask);
 static void clear_leds(void);
+static void status_led(bs_state_t state);
 
 // Server & message handling
 static void recv(void);
@@ -75,6 +78,8 @@ int main(void)
             // Resume reception after a reply has been sent
             recv();
         }
+
+        status_led(bs_server_get_state(&g_server));
     }
 }
 
@@ -216,6 +221,27 @@ static void set_leds(uint8_t mask)
 static void clear_leds(void)
 {
     set_leds(0);
+}
+
+static void status_led(bs_state_t state)
+{
+    /**
+     * Maps a game state to an LED colour for D9.
+     *
+     * Green: Idle
+     * Orange: Planning-phase
+     * Red: Firing phase
+     * Off: Game over
+     */
+
+    // PB10 = Red; PB11 = Green
+    switch (state)
+    {
+        case BS_IDLE:                 HAL_GPIO_WritePin(GPIOB, GPIO_PIN_11, SET); return;
+        case BS_IN_PROGRESS_PLANNING: HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10 | GPIO_PIN_11, SET); return;
+        case BS_IN_PROGRESS_FIRING:   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10, SET); return;
+        case BS_GAME_OVER:            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10 | GPIO_PIN_11, RESET); return;
+    }
 }
 
 static void recv(void)
