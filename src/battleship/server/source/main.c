@@ -23,7 +23,7 @@ struct uart_state_t
 
     volatile uint8_t tx_ready;
     size_t tx_len;
-    char tx_buf[BS_MAX_REPLY];
+    char tx_buf[BS_REPLY_BUF];
 } g_uart_state;
 
 // Hardware initalization
