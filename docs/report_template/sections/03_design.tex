@@ -1,0 +1,64 @@
+\section{Specification and Design}
+\label{sec:design}
+
+\begin{guidance}[Specification and design (15 marks)]
+Required (brief, A.3--A.5): an \textbf{embedded server FSM} covering IDLE,
+IN\_PROGRESS, GAME\_OVER \textbf{and the move-validation branch}; a
+\textbf{flowchart of the GUI application}; and a \textbf{circuit diagram} of the
+STM-to-PC UART connection, with the on-board button and LED behaviour labelled.
+Diagrams may be at function level. Explain \textbf{why} responsibilities sit on
+the server or the client. Draw diagrams in a tool that exports vector PDF
+(draw.io, TikZ, Mermaid) and check that every label is readable when printed.
+\end{guidance}
+
+\subsection{\ph{Heading about your overall architecture}}
+\ph{How the firmware and the client are divided into modules, and why. Which
+parts are pure logic, which touch hardware? Which side owns which decision
+(board, turn, legality, win detection, redrawing)? A small table or block
+diagram helps.}
+
+\subsection{\ph{Heading about your server FSM}}
+\ph{Walk the reader through Fig.~\ref{fig:fsm}: the three states, what each
+command does in each state, and the move-validation branch (which checks, in
+which order, and what happens when one fails). State which transitions the
+figure omits, if any.}
+
+\begin{figure*}[t]
+\centering
+\figph{5.5cm}{Server FSM (full width): states IDLE, IN\_PROGRESS, GAME\_OVER;
+every transition labelled ``command [guard] / response''; the MOVE validation
+branch drawn as a chain of checks, each with its NACK exit; the win/draw
+outcome leading to GAME\_OVER; the button's effect.}
+\caption{\ph{Server FSM with the move-validation branch.}}
+\label{fig:fsm}
+\end{figure*}
+
+\subsection{\ph{Heading about your GUI}}
+\ph{Walk through Fig.~\ref{fig:gui}: connecting, sending a move, handling each
+kind of reply, redrawing, disabling moves after game over, disconnecting,
+and what happens on a timeout or an unplugged cable. Explain how the GUI
+avoids freezing while it waits for the board (threads, timers or polling).}
+
+\begin{figure}[t]
+\centering
+\figph{7cm}{GUI flowchart: start $\rightarrow$ connect $\rightarrow$ wait for
+input $\rightarrow$ send request $\rightarrow$ branch on the reply (board, win/draw,
+NACK, timeout) $\rightarrow$ update display $\rightarrow$ loop; plus the
+disconnect and error paths.}
+\caption{\ph{GUI application flowchart.}}
+\label{fig:gui}
+\end{figure}
+
+\subsection{\ph{Heading about your circuit}}
+\ph{Describe Fig.~\ref{fig:circuit}: how USART TX/RX reach the PC (on-board
+virtual COM port or a USB-UART converter, and which one), ground, the button
+and LED pins you use, their active level, and what each LED and button does in
+your game.}
+
+\begin{figure}[t]
+\centering
+\figph{3.5cm}{Circuit diagram: STM32F051 TX/RX pins $\rightarrow$ USB-UART path
+$\rightarrow$ PC, with GND; button and LED pins labelled with their behaviour.}
+\caption{\ph{Circuit: UART link to the PC, button and LEDs.}}
+\label{fig:circuit}
+\end{figure}

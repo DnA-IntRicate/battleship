@@ -1,0 +1,34 @@
+\section{Game Logic and Server Authority}
+\label{sec:authority}
+
+\begin{guidance}[Game logic and server authority (15 marks)]
+Show: correct \textbf{move validation}; rejection of \textbf{illegal,
+out-of-turn and out-of-state} moves with specific errors; reliable
+\textbf{win and draw detection}; and a \textbf{client-untrusted} design. Most
+importantly, give an argument that a \textbf{rejected request cannot change the
+server state}, based on how your code is structured (e.g. every check runs
+before the first write), and point to the tests that check it. The brief calls
+this a ``proof''; make it a step-by-step argument a reader can verify against
+your code.
+\end{guidance}
+
+\subsection{\ph{Heading about move validation}}
+\ph{Which checks a move goes through, in which order, and where in the code
+they live. A short listing of the validation code is useful here.}
+
+\subsection{\ph{Heading about your argument that rejections change nothing}}
+\ph{Step-by-step: where every error response is produced, and why no state is
+written on any path that ends in an error. Cover framing errors, unknown
+commands and every command handler. Then name the tests that check it.}
+
+\subsection{\ph{Heading about turn control}}
+\ph{How the server tracks and enforces whose turn it is, and how out-of-turn
+requests are rejected.}
+
+\subsection{\ph{Heading about win and draw detection}}
+\ph{How you detect every win and the draw (e.g. a table of winning lines), in
+which order you check them, and why that order matters. How the server refuses
+moves once the game is over.}
+
+\subsection{\ph{Heading about the client}}
+\ph{Why the client contains no game rules, and what would go wrong if it did.}

@@ -1,0 +1,33 @@
+\section{Introduction}
+\label{sec:intro}
+
+\begin{guidance}[Introduction (10 marks), about half a page]
+The marker wants: the context and goal of the project; your \textbf{selected
+game} and \textbf{GUI library}, with the reason for each choice; your main
+\textbf{design choices}; the \textbf{task allocation} between the two of you; and
+the \textbf{structure} of the report. Keep it to about half a page (brief,
+p.~6). Open with the problem, not with the technology. Expand every acronym at
+first use, e.g.\ ``finite-state machine (FSM)''.
+\end{guidance}
+
+\ph{Paragraph 1, the problem. Why must the STM32 be the referee? What goes
+wrong if the PC client is trusted? Cite the brief~\cite{brief}. State the one property your design
+guarantees (e.g. that a rejected request never changes the game state).}
+
+\ph{Paragraph 2, choices. Which game did you choose and why? (Tic-Tac-Toe is the
+baseline; a more complex game can reach the top band once the compulsory parts
+work.) Which GUI library and why (installation, familiarity, threading
+support)? Cite it, e.g.~\cite{guilib}.}
+
+\ph{Paragraph 3, design choices. Two or three sentences on the decisions that
+shape your system, e.g. how you split the firmware, how you frame messages,
+how you test without hardware.}
+
+\textbf{Task allocation.} \ph{Who did what. Name each student and their
+areas (e.g. firmware and protocol; GUI and test harness) and what you did
+together (protocol specification, integration, report).}
+
+\textbf{Structure.} Section~\ref{sec:protocol} \ph{describes \ldots}
+Section~\ref{sec:design} \ph{\ldots} Section~\ref{sec:impl} \ph{\ldots}
+Section~\ref{sec:authority} \ph{\ldots} Section~\ref{sec:robust} \ph{\ldots}
+Section~\ref{sec:valid} \ph{\ldots} Section~\ref{sec:conclusion} \ph{\ldots}

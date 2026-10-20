@@ -1,0 +1,58 @@
+\section{Validation}
+\label{sec:valid}
+
+\begin{guidance}[Validation and automated test harness (15 marks)]
+Show \textbf{passing tests for every required case} and \textbf{screenshots or a
+short video} of the working system. The brief's required tests (p.~4):
+CONNECT returns OK and NEW returns an empty board; a legal move changes the
+board exactly as expected; an occupied-cell move returns NACK:OCCUPIED and
+leaves the board unchanged; an out-of-range move returns NACK:RANGE; a move
+after game over returns NACK:NOGAME (or your documented equivalent); scripted
+win and draw sequences return the correct result; and, if you built an AI
+opponent, it never makes an illegal move. Map each one to a named test.
+\textbf{Report results on the real board}, and say clearly which results come
+from a simulator, if you used one.
+\end{guidance}
+
+\subsection{\ph{Heading about your test setup}}
+\ph{How the harness drives the board without human interaction (library,
+e.g.~pytest~\cite{pytest} and pySerial~\cite{pyserial};
+how it connects, how each test starts from a known state), and how to run it.}
+
+\subsection{\ph{Heading that states your headline test result}}
+\ph{Introduce Table~\ref{tab:required} and any further tests (robustness,
+every win line, and so on). Interpret the results; do not just list them.}
+
+\begin{table}[t]
+\centering
+\caption{\ph{The brief's required tests and their results on the board.}}
+\label{tab:required}
+\footnotesize
+\begin{tabular}{@{}L{5.1cm}L{1.6cm}c@{}}
+\toprule
+Requirement (brief, p.~4) & Test name & Result \\
+\midrule
+CONNECT returns OK; NEW returns an empty board & \ph{name} & \ph{pass} \\
+A legal move changes the board exactly as expected & \ph{name} & \ph{pass} \\
+Occupied cell returns NACK:OCCUPIED, board unchanged & \ph{name} & \ph{pass} \\
+Out-of-range move returns NACK:RANGE & \ph{name} & \ph{pass} \\
+Move after game over returns NACK:NOGAME & \ph{name} & \ph{pass} \\
+Scripted win and draw give the correct result & \ph{name} & \ph{pass} \\
+AI never makes an illegal move (if implemented) & \ph{name} & \ph{n/a} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\ph{Paste or summarise the test run output here (e.g. the final pytest summary
+line), and say whether it ran against the board.}
+
+\begin{figure}[t]
+\centering
+\figph{5cm}{Screenshot of your GUI connected to the board, e.g. mid-game or
+just after a rejected move, with the message the user sees.}
+\caption{\ph{What the screenshot shows and what to notice in it.}}
+\label{fig:screenshot}
+\end{figure}
+
+\subsection{\ph{Heading about what testing revealed}}
+\ph{Bugs the tests or the hardware exposed, and how you fixed them.}

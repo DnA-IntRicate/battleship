@@ -1,0 +1,43 @@
+\section{Protocol Robustness and Integrity}
+\label{sec:robust}
+
+\begin{guidance}[Protocol robustness and integrity (10 marks)]
+Show \textbf{framing}, \textbf{specific NACKs for malformed input}, and
+\textbf{graceful recovery} from partial or garbage data. A table that maps each
+kind of bad input to your mechanism, its response and the test that checks it
+works well. Also explain why the server can never block forever (bounded
+loops, timeouts, no blocking waits in the main loop). Give measured numbers
+where you have them, e.g. the timeout you observed.
+\end{guidance}
+
+\ph{One-sentence summary of how your server handles bad input.}
+
+\begin{table}[t]
+\centering
+\caption{\ph{Bad input, the server's handling, and the test that checks it.}}
+\label{tab:threats}
+\scriptsize
+\begin{tabular}{@{}L{1.7cm}L{3.1cm}L{3.2cm}@{}}
+\toprule
+Bad input & Handling and response & Test \\
+\midrule
+Partial frame & \ph{\ldots} & \ph{\ldots} \\
+Oversized frame & \ph{\ldots} & \ph{\ldots} \\
+Garbage bytes & \ph{\ldots} & \ph{\ldots} \\
+Wrong case or unknown command & \ph{\ldots} & \ph{\ldots} \\
+Corrupted bytes (checksum) & \ph{\ldots} & \ph{\ldots} \\
+UART errors (overrun, framing) & \ph{\ldots} & \ph{\ldots} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{\ph{Heading about partial frames and timeouts}}
+\ph{Your timeout rule, why you chose that value, and what you measured.}
+
+\subsection{\ph{Heading about garbage and oversized input}}
+\ph{How the server discards bad bytes and resynchronises on the next valid
+frame.}
+
+\subsection{\ph{Heading about why the server never hangs}}
+\ph{Bounded loops, bounded transmit times, no blocking waits, watchdog (if
+used).}

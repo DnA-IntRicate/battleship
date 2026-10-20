@@ -1,0 +1,34 @@
+\section{Implementation}
+\label{sec:impl}
+
+\begin{guidance}[Implementation (15 marks)]
+Choose \textbf{3 to 5 short code excerpts} that were \textbf{not straightforward}
+to write, and explain each: what problem it solves, why you wrote it this way,
+and what would go wrong with the obvious alternative. Good candidates:
+receiving bytes in an interrupt and handing them to the main loop; the frame
+assembler with timeout and oversize handling; non-blocking button debounce;
+keeping the GUI responsive; separating unsolicited messages from replies.
+Keep each listing short (10--25 lines) and narrow enough for one column; trim
+comments and boilerplate, and say that you did. Do not paste whole files.
+\end{guidance}
+
+\subsection{\ph{Heading that states what excerpt 1 achieves}}
+\ph{Explain Listing~\ref{lst:example}: the problem, your approach, and why it
+works. Cite the documents you relied on, e.g. the HAL manual~\cite{um1785} or
+the reference manual~\cite{rm0091}. Mention any bug you found and how you fixed it; markers value an
+honest account of what was hard.}
+
+\begin{lstlisting}[language=C, caption={\ph{What this excerpt does} (\texttt{\ph{file.c}}).}, label=lst:example]
+/* Replace with a short excerpt of your own code. */
+void example(void)
+{
+    /* ... */
+}
+\end{lstlisting}
+
+\subsection{\ph{Heading for excerpt 2}}
+\ph{Same pattern: problem, approach, justification, listing.}
+
+\subsection{\ph{Heading for excerpt 3}}
+\ph{Same pattern. Include at least one excerpt from the PC client (e.g. how it
+reads replies without blocking the GUI).}

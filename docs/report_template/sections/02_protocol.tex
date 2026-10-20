@@ -1,0 +1,109 @@
+\section{Requirements and Message Protocol}
+\label{sec:protocol}
+
+\begin{guidance}[Requirements and message protocol (15 marks)]
+Describe and diagram your \textbf{final} protocol: physical link (interface,
+baud rate, frame format), \textbf{framing} (terminator, maximum frame length,
+timeout), \textbf{board encoding}, the complete \textbf{command set}, and
+\textbf{every response and error}. Cover new game, move, win/draw and
+disconnect. Include at least one \textbf{sequence diagram}. \textbf{Highlight
+every departure} from the brief's reference protocol (p.~3) and justify each
+one. A reader should be able to write a compatible client from this section
+alone.
+\end{guidance}
+
+\subsection{\ph{Heading that states your framing rule, e.g. ``Lines of at most N bytes frame the stream''}}
+\ph{Physical link: which USART, which pins, baud rate, data bits, parity, stop
+bits, flow control. Framing: the terminator, how you treat \texttt{\textbackslash r},
+the maximum frame length and what happens when it is exceeded, the timeout for
+an incomplete frame, the character set allowed, the checksum or CRC (if any)
+and how it is computed. Use Table~\ref{tab:framing}.}
+
+\begin{table}[t]
+\centering
+\caption{\ph{Framing rules and the response to each violation.}}
+\label{tab:framing}
+\footnotesize
+\begin{tabular}{@{}L{3.0cm}L{5.0cm}@{}}
+\toprule
+Rule & Server behaviour \\
+\midrule
+Terminator & \ph{e.g. \texttt{\textbackslash n} ends a frame} \\
+Maximum frame length & \ph{N bytes; what happens on overflow} \\
+Incomplete frame & \ph{timeout value; reply sent} \\
+Invalid character & \ph{\ldots} \\
+Checksum (optional) & \ph{algorithm; reply on mismatch} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{\ph{Heading about your board encoding}}
+\ph{How the game state is encoded in a message (e.g. nine characters, cells
+0--8 row by row, \texttt{.}/\texttt{X}/\texttt{O}). Give one worked example.}
+
+\subsection{\ph{Heading about your command set}}
+\ph{Introduce Table~\ref{tab:commands}. Explain any command that is not obvious,
+and how the client learns about changes it did not request (e.g. a game
+started from the board's button).}
+
+\begin{table}[t]
+\centering
+\caption{\ph{Command set. Mark departures from the brief, e.g. with $^\dagger$.}}
+\label{tab:commands}
+\scriptsize
+\begin{tabular}{@{}L{1.9cm}L{1.8cm}L{4.3cm}@{}}
+\toprule
+Request & Accepted in & Success response \\
+\midrule
+\texttt{CONNECT} & \ph{state(s)} & \ph{response} \\
+\texttt{NEW} & \ph{\ldots} & \ph{\ldots} \\
+\texttt{MOVE:<i>} & \ph{\ldots} & \ph{\ldots} \\
+\texttt{STATE} & \ph{\ldots} & \ph{\ldots} \\
+\texttt{RESIGN} & \ph{\ldots} & \ph{\ldots} \\
+\texttt{DISCONNECT} & \ph{\ldots} & \ph{\ldots} \\
+\ph{your additions} & \ph{\ldots} & \ph{\ldots} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{\ph{Heading about your errors}}
+\ph{List every error response in Table~\ref{tab:errors}, when it is sent and
+what it guarantees about the server state. If a request can fail more than one
+check, state the order in which you check, so that every request has exactly
+one correct response.}
+
+\begin{table}[t]
+\centering
+\caption{\ph{Every error response and when the server sends it.}}
+\label{tab:errors}
+\footnotesize
+\begin{tabular}{@{}L{2.25cm}L{5.75cm}@{}}
+\toprule
+Response & Sent when \\
+\midrule
+\texttt{NACK:BADCMD} & \ph{\ldots} \\
+\texttt{NACK:NOGAME} & \ph{\ldots} \\
+\texttt{NACK:RANGE} & \ph{\ldots} \\
+\texttt{NACK:OCCUPIED} & \ph{\ldots} \\
+\texttt{NACK:NOTURN} & \ph{\ldots} \\
+\ph{your additions} & \ph{\ldots} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{\ph{Heading about your departures from the brief}}
+\ph{For each change or addition to the reference protocol: what you changed
+and why it was needed. One or two sentences each. Note: with a single client,
+an out-of-turn move may be impossible to send; explain how your protocol makes
+\texttt{NACK:NOTURN} testable, or why it does not apply.}
+
+\begin{figure}[t]
+\centering
+\figph{5.5cm}{Sequence diagram: CONNECT $\rightarrow$ NEW $\rightarrow$ moves
+$\rightarrow$ WIN/DRAW $\rightarrow$ STATE $\rightarrow$ DISCONNECT, and/or a
+rejected move and recovery from a bad frame. Client on the left, server on the
+right, time downwards, replies as dashed arrows.}
+\caption{\ph{Caption that states what the diagram shows, e.g. ``A rejected move
+leaves the board unchanged.''}}
+\label{fig:sequence}
+\end{figure}
