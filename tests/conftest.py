@@ -20,7 +20,7 @@ def pytest_addoption(parser: pytest.Parser):
     parser.addoption(
         "--port",
         default=None,
-        help="serial port of the STM32 server, e.g. COM5"
+        help="serial port of the STM32 server, e.g. COM5 "
         "Without it, tests that need the board are skipped.",
     )
 
