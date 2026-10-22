@@ -4,7 +4,7 @@ Shared fixtures for the test harness.
 Tests that use the `session` fixture drive the real STM32 server over UART.
 They only run when a serial port is given, and are skipped otherwise:
 
-    uv run pytest --port COM5
+    uv run pytest --port COM10
 """
 
 from collections.abc import Iterator
@@ -20,7 +20,7 @@ def pytest_addoption(parser: pytest.Parser):
     parser.addoption(
         "--port",
         default=None,
-        help="serial port of the STM32 server, e.g. COM5 "
+        help="serial port of the STM32 server, e.g. COM10. "
         "Without it, tests that need the board are skipped.",
     )
 
