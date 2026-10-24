@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
+    QMessageBox,
     QPushButton,
     QVBoxLayout,
     QWidget,
@@ -76,9 +77,20 @@ class MainWindow(QMainWindow):
         self.refresh_button.setAccessibleName("Refresh serial ports")
         self.connect_button = QPushButton("Connect")
         self.disconnect_button = QPushButton("Disconnect")
+        self.new_button = QPushButton("New Game")
+        self.resign_button = QPushButton("Resign")
 
-        for button in (self.refresh_button, self.connect_button, self.disconnect_button):
+        for button in (
+            self.refresh_button,
+            self.connect_button,
+            self.disconnect_button,
+            self.new_button,
+            self.resign_button,
+        ):
             button.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        self.new_button.clicked.connect(self.new_game)
+        self.resign_button.clicked.connect(self.resign)
 
         self.refresh_button.clicked.connect(self.refresh_ports)
         self.connect_button.clicked.connect(self.connect_to_board)
@@ -91,6 +103,9 @@ class MainWindow(QMainWindow):
         controls.addStretch()
         controls.addWidget(self.connect_button)
         controls.addWidget(self.disconnect_button)
+        controls.addSpacing(16)
+        controls.addWidget(self.new_button)
+        controls.addWidget(self.resign_button)
 
         self.own_view = BoardView("Your fleet")
         self.target_view = BoardView("Your shots")
@@ -155,6 +170,25 @@ class MainWindow(QMainWindow):
     def disconnect_from_board(self):
         self.send("disconnect", lambda s: s.disconnect())
 
+    @Slot()
+    def new_game(self):
+        self.send("new", lambda s: s.new_game())
+
+    @Slot()
+    def resign(self):
+        # In hotseat play the player whose turn it is is at the keyboard.
+        player = self.board.turn if self.board else None
+        if player is None:
+            return
+
+        if self.confirm(f"Resign the game as {player}?"):
+            self.send("resign", lambda s: s.resign(player))
+
+    def confirm(self, question: str) -> bool:
+        """Ask before an irreversible action. Tests replace this method."""
+        answer = QMessageBox.question(self, "Battleship", question)
+        return answer == QMessageBox.StandardButton.Yes
+
     # Replies (always handled on the GUI thread)
 
     @Slot(str, object)
@@ -178,6 +212,13 @@ class MainWindow(QMainWindow):
             self.show_status("Disconnected.")
         elif tag == "state" and isinstance(reply, Board):
             self.show_board(reply)
+        elif tag == "new":
+            self.show_status(f"New game. {Player.P1}, place your ships.")
+            self.request_state()
+        elif tag == "resign":
+            resigned = self.board.turn if self.board else "The player"
+            self.show_status(f"{resigned} resigned. Game over.")
+            self.request_state()
         elif isinstance(reply, Ok):
             self.request_state()
 
@@ -206,12 +247,22 @@ class MainWindow(QMainWindow):
         self.status.setStyleSheet(_ERROR_CSS if error else _INFO_CSS)
         self.status.setProperty("error", error)
 
+    @property
+    def in_game(self) -> bool:
+        """True while the server's last board shows a game in progress."""
+        return self.board is not None and self.board.turn is not None
+
     def update_controls(self):
+        # The server checks every request anyway; disabling buttons it would
+        # reject just saves the user from errors.
         idle = not self.busy
         self.port_box.setEnabled(idle and not self.connected)
         self.refresh_button.setEnabled(idle and not self.connected)
         self.connect_button.setEnabled(idle and not self.connected)
-        self.disconnect_button.setEnabled(idle and self.connected)
+        self.disconnect_button.setEnabled(idle and self.connected and not self.in_game)
+        self.new_button.setEnabled(idle and self.connected and not self.in_game)
+        self.resign_button.setEnabled(idle and self.connected and self.in_game)
+        self.disconnect_button.setToolTip("Resign the game first." if self.in_game else "")
         self.own_view.set_clickable(False)
         self.target_view.set_clickable(False)
 

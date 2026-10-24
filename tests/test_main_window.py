@@ -66,15 +66,62 @@ def test_connect_without_port():
     assert window.status.text() == "Choose a serial port first."
 
 
-def test_disconnect_mid_game_shows_reason():
+def test_disconnect_disabled_mid_game():
     window = make_window(FakePort("OK", f"BOARD:P1:{FLEET}:{EMPTY}", "NACK:BADSTATE"))
     window.connect_button.click()
 
-    window.disconnect_button.click()
+    assert not window.disconnect_button.isEnabled()
+    assert window.disconnect_button.toolTip() == "Resign the game first."
 
+    # The server still decides: if the request were sent anyway, its reason is shown.
+    window.disconnect_from_board()
     assert window.connected
     assert window.status.text() == "That is not allowed at this point in the game."
     assert window.status.property("error")
+
+
+def test_new_game():
+    port = FakePort("OK", "NACK:NOGAME", "OK:PLACE", f"BOARD:P1:{EMPTY}:{EMPTY}")
+    window = make_window(port)
+    window.connect_button.click()
+    assert window.new_button.isEnabled()
+    assert not window.resign_button.isEnabled()
+
+    window.new_button.click()
+
+    assert port.written[-2:] == [b"NEW\n", b"STATE:P1\n"]
+    assert window.status.text() == "New game. P1, place your ships."
+    assert window.in_game
+    assert not window.new_button.isEnabled()
+    assert window.resign_button.isEnabled()
+
+
+def test_resign_asks_first(monkeypatch: pytest.MonkeyPatch):
+    port = FakePort("OK", f"BOARD:P1:{FLEET}:{EMPTY}")
+    window = make_window(port)
+    window.connect_button.click()
+    questions: list[str] = []
+    monkeypatch.setattr(window, "confirm", lambda question: questions.append(question) or False)
+
+    window.resign_button.click()
+
+    assert questions == ["Resign the game as P1?"]
+    assert port.written[-1] == b"STATE:P1\n"  # nothing sent after the refusal
+
+
+def test_resign(monkeypatch: pytest.MonkeyPatch):
+    port = FakePort("OK", f"BOARD:P1:{FLEET}:{EMPTY}", "OK:GAMEOVER", f"BOARD:--:{FLEET}:{EMPTY}")
+    window = make_window(port)
+    window.connect_button.click()
+    monkeypatch.setattr(window, "confirm", lambda _question: True)
+
+    window.resign_button.click()
+
+    assert b"RESIGN:P1\n" in port.written
+    assert window.status.text() == "P1 resigned. Game over."
+    assert not window.in_game
+    assert window.new_button.isEnabled()
+    assert window.disconnect_button.isEnabled()
 
 
 def test_disconnect():
