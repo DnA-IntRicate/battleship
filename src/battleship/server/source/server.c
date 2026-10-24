@@ -280,10 +280,12 @@ static size_t command_place(bs_server_t* server, int player, char* const* f, cha
     if ((f[4][1] != '\0') || ((orientation != 'H') && (orientation != 'V')))
         return nack(out, "BADCMD");
 
+    // Malformed cells are a syntax error. An out-of-range cell is only
+    // reported after the ship checks BADSHIP and DUPSHIP before RANGE.
     uint8_t bow      = 0;
     cell_result_t cr = parse_cell(f[3], &bow);
-    if (cr != CELL_OK)
-        return nack(out, (cr == CELL_BAD) ? "BADCMD" : "RANGE");
+    if (cr == CELL_BAD)
+        return nack(out, "BADCMD");
 
     // Validate the ship index/char
     int ship = parse_ship(f[2]);
@@ -294,6 +296,10 @@ static size_t command_place(bs_server_t* server, int player, char* const* f, cha
     bs_fleet_t* fleet = &server->fleet[player];
     if (fleet->placed_mask & (1 << ship))
         return nack(out, "DUPSHIP");
+
+    // Range check
+    if (cr == CELL_OOR)
+        return nack(out, "RANGE");
 
     // Extract the ship coordinates
     uint32_t len    = SHIP_LEN[ship];
