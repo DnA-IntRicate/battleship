@@ -10,12 +10,14 @@ import os
 from PySide6.QtCore import Qt, QThread, Signal, Slot
 from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
+    QButtonGroup,
     QComboBox,
     QHBoxLayout,
     QLabel,
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QRadioButton,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -24,9 +26,13 @@ from serial.tools import list_ports
 
 from battleship.client.gui.board_view import BoardView
 from battleship.client.gui.worker import Request, SerialWorker
-from battleship.client.protocol import NUM_CELLS, Board, Nack, Ok, Player, Reply
+from battleship.client.protocol import FLEET, NUM_CELLS, Board, Nack, Ok, Player, Reply
 
 EMPTY = "." * NUM_CELLS
+
+# Cells a complete fleet occupies (17). A player whose own board shows fewer
+# ship cells is still placing ships.
+FLEET_CELLS = sum(length for _name, length in FLEET.values())
 
 # Status line styles; both have a contrast ratio above 9:1 in light and dark themes.
 _INFO_CSS = "background: #e8f1fb; color: #0f2a44; padding: 6px; border-radius: 4px;"
@@ -112,6 +118,38 @@ class MainWindow(QMainWindow):
         self.viewer_label = QLabel()
         self.own_view = BoardView("Your fleet")
         self.target_view = BoardView("Your shots")
+        self.own_view.cell_clicked.connect(self.on_own_cell)
+
+        # Placement controls, shown only while the viewer is placing ships.
+        self.ship_box = QComboBox()
+        ship_label = QLabel("&Ship:")
+        ship_label.setBuddy(self.ship_box)
+        self.horizontal = QRadioButton("&Horizontal")
+        self.vertical = QRadioButton("&Vertical")
+        self.horizontal.setChecked(True)
+        orientation = QButtonGroup(self)
+        orientation.addButton(self.horizontal)
+        orientation.addButton(self.vertical)
+
+        placement_row = QHBoxLayout()
+        placement_row.addWidget(ship_label)
+        placement_row.addWidget(self.ship_box)
+        placement_row.addSpacing(16)
+        placement_row.addWidget(self.horizontal)
+        placement_row.addWidget(self.vertical)
+        placement_row.addStretch()
+
+        self.placement_bar = QWidget()
+        placement_layout = QVBoxLayout(self.placement_bar)
+        placement_layout.setContentsMargins(0, 0, 0, 0)
+        placement_layout.addLayout(placement_row)
+        placement_layout.addWidget(
+            QLabel(
+                "Click the cell where the ship's bow should go: "
+                "horizontal ships extend right, vertical ships extend down."
+            )
+        )
+        self.placement_bar.setHidden(True)
 
         boards = QHBoxLayout()
         boards.addWidget(self.own_view)
@@ -120,6 +158,7 @@ class MainWindow(QMainWindow):
         boards_page = QWidget()
         boards_layout = QVBoxLayout(boards_page)
         boards_layout.addWidget(self.viewer_label)
+        boards_layout.addWidget(self.placement_bar)
         boards_layout.addLayout(boards)
 
         # Page 2: covers the boards while the computer is passed to the other player.
@@ -279,12 +318,52 @@ class MainWindow(QMainWindow):
             )
             self.handoff_button.setText(f"I'm {board.turn}, show my boards")
             self.pages.setCurrentIndex(1)
+            self.show_status(f"{self.viewer}'s turn is over. Pass the computer to {board.turn}.")
             return
 
         self.pages.setCurrentIndex(0)
         self.viewer_label.setText(f"<b>{self.viewer}'s boards</b>" if board else "")
         self.own_view.show_board(board.own if board else EMPTY)
         self.target_view.show_board(board.target if board else EMPTY)
+        self.update_placement()
+
+    @property
+    def placing(self) -> bool:
+        """True while it is the viewer's turn and their fleet is incomplete."""
+        board = self.board
+        if board is None or board.turn != self.viewer:
+            return False
+
+        return sum(char in "CBRSDX" for char in board.own) < FLEET_CELLS
+
+    def update_placement(self):
+        """Show the placement controls with the ships the viewer has not placed yet."""
+        self.placement_bar.setHidden(not self.placing)
+        if self.board is None or not self.placing:
+            return
+
+        selected = self.ship_box.currentData()
+        remaining = [ship for ship in FLEET if ship not in self.board.own]
+
+        self.ship_box.clear()
+        for ship in remaining:
+            name, length = FLEET[ship]
+            self.ship_box.addItem(f"{name} ({length})", ship)
+        if selected in remaining:
+            self.ship_box.setCurrentIndex(remaining.index(selected))
+
+        self.show_status(f"{self.viewer}, place your ships: {len(remaining)} left.")
+
+    @Slot(str)
+    def on_own_cell(self, cell: str):
+        """A click on the viewer's fleet grid places the selected ship there."""
+        ship = self.ship_box.currentData()
+        if not self.placing or not ship:
+            return
+
+        player = self.viewer
+        orientation = "H" if self.horizontal.isChecked() else "V"
+        self.send("place", lambda s: s.place(player, ship, cell, orientation))
 
     @property
     def handing_off(self) -> bool:
@@ -321,7 +400,8 @@ class MainWindow(QMainWindow):
         )
         self.handoff_button.setEnabled(idle)
         self.disconnect_button.setToolTip("Resign the game first." if self.in_game else "")
-        self.own_view.set_clickable(False)
+        self.placement_bar.setEnabled(idle)
+        self.own_view.set_clickable(idle and self.placing and not self.handing_off)
         self.target_view.set_clickable(False)
 
     def closeEvent(self, event: QCloseEvent):

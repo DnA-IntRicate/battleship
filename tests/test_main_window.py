@@ -90,7 +90,7 @@ def test_new_game():
     window.new_button.click()
 
     assert port.written[-2:] == [b"NEW\n", b"STATE:P1\n"]
-    assert window.status.text() == "New game. P1, place your ships."
+    assert window.status.text() == "P1, place your ships: 5 left."
     assert window.in_game
     assert not window.new_button.isEnabled()
     assert window.resign_button.isEnabled()
@@ -152,6 +152,77 @@ def test_game_over_shows_boards_without_handoff():
 
     assert not window.handing_off
     assert window.own_view._cells[0].text() == "C"
+
+
+def ships_in(window: MainWindow) -> list[str]:
+    box = window.ship_box
+    return [box.itemData(i) for i in range(box.count())]
+
+
+def test_placement_controls_shown_while_placing():
+    window = make_window(FakePort("OK", f"BOARD:P1:{EMPTY}:{EMPTY}"))
+
+    window.connect_button.click()
+
+    assert window.placing
+    assert not window.placement_bar.isHidden()
+    assert ships_in(window) == ["C", "B", "R", "S", "D"]
+    assert window.own_view._cells[0].isEnabled()
+    assert not window.target_view._cells[0].isEnabled()
+
+
+def test_click_places_selected_ship():
+    port = FakePort("OK", f"BOARD:P1:{EMPTY}:{EMPTY}", "OK:PLACED", f"BOARD:P1:{FLEET}:{EMPTY}")
+    window = make_window(port)
+    window.connect_button.click()
+
+    window.own_view._cells[0].click()  # A0, Carrier, horizontal by default
+
+    assert b"PLACE:P1:C:A0:H\n" in port.written
+    assert ships_in(window) == ["B", "R", "S", "D"]
+    assert window.status.text() == "P1, place your ships: 4 left."
+
+
+def test_place_vertical_with_chosen_ship():
+    port = FakePort("OK", f"BOARD:P1:{EMPTY}:{EMPTY}", "NACK:OVERLAP")
+    window = make_window(port)
+    window.connect_button.click()
+    window.ship_box.setCurrentIndex(4)  # Destroyer
+    window.vertical.setChecked(True)
+
+    window.own_view._cells[12].click()  # B2
+
+    assert port.written[-1] == b"PLACE:P1:D:B2:V\n"
+
+
+def test_rejected_placement_shows_reason():
+    window = make_window(FakePort("OK", f"BOARD:P1:{EMPTY}:{EMPTY}", "NACK:OVERLAP"))
+    window.connect_button.click()
+
+    window.own_view._cells[0].click()
+
+    assert window.status.text() == "That ship would overlap another ship."
+    assert window.status.property("error")
+    assert ships_in(window) == ["C", "B", "R", "S", "D"]
+
+
+def test_complete_fleet_hands_over_to_p2():
+    almost = "CCCCC" + "BBBB." + "RRR.." + "SSS.." + "." * 80  # Destroyer missing
+    port = FakePort(
+        "OK",
+        f"BOARD:P1:{almost}:{EMPTY}",
+        "OK:PLACED",
+        f"BOARD:P2:{almost[:80]}DD{'.' * 18}:{EMPTY}",
+    )
+    window = make_window(port)
+    window.connect_button.click()
+    assert ships_in(window) == ["D"]
+
+    window.own_view._cells[90].click()  # J0
+
+    assert b"PLACE:P1:D:J0:H\n" in port.written
+    assert window.handing_off
+    assert window.status.text() == "P1's turn is over. Pass the computer to P2."
 
 
 def test_disconnect():
