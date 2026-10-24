@@ -5,21 +5,32 @@ The widget holds no game state: show_board() is the only way to change what it
 shows, and the window only calls it with a board from a STATE reply.
 """
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from battleship.client.protocol import BOARD_SIZE, NUM_CELLS, ROWS, cell_name
 
-CELL_PX = 30
+CELL_PX = 36
 
-# Board character -> (text, background colour, text colour)
-_WATER = ("", "#9cc9e6", "black")
+# Board character -> (text, background colour, text colour). Every pair has a
+# contrast ratio of at least 4.5:1, and each state also has its own symbol, so
+# the board does not rely on colour alone.
+_WATER = ("", "#9cc9e6", "black")  # 11.9:1
 _STYLES: dict[str, tuple[str, str, str]] = {
     ".": _WATER,
-    "X": ("✕", "#d9534f", "white"),  # hit
+    "X": ("✕", "#b52b27", "white"),  # hit
     "o": ("•", "#f4f8fb", "#4a6b82"),  # miss
-    **{ship: (ship, "#7d8790", "white") for ship in "CBRSD"},  # unhit ship
+    **{ship: (ship, "#56616b", "white") for ship in "CBRSD"},  # unhit ship
 }
+
+# Hover and keyboard focus need their own borders: "border: none" would hide
+# Qt's default focus ring.
+_CELL_CSS = """
+QPushButton {{ background: {background}; color: {colour}; font-weight: bold;
+               border: 2px solid transparent; }}
+QPushButton:enabled:hover {{ border-color: #f4f8fb; }}
+QPushButton:focus {{ border-color: #1a73e8; }}
+"""
 
 
 class BoardView(QWidget):
@@ -62,13 +73,13 @@ class BoardView(QWidget):
         for button, char in zip(self._cells, cells, strict=True):
             text, background, colour = _STYLES.get(char, _WATER)
             button.setText(text)
-            button.setStyleSheet(
-                f"background: {background}; color: {colour}; font-weight: bold; border: none;"
-            )
+            button.setStyleSheet(_CELL_CSS.format(background=background, colour=colour))
 
     def set_clickable(self, clickable: bool):
+        cursor = Qt.CursorShape.PointingHandCursor if clickable else Qt.CursorShape.ArrowCursor
         for button in self._cells:
             button.setEnabled(clickable)
+            button.setCursor(cursor)
 
 
 if __name__ == "__main__":

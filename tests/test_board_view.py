@@ -6,6 +6,8 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 QtWidgets = pytest.importorskip("PySide6.QtWidgets")
 
+from PySide6.QtCore import Qt  # noqa: E402
+
 from battleship.client.gui.board_view import BoardView  # noqa: E402
 from battleship.client.protocol import cell_index  # noqa: E402
 
@@ -54,3 +56,7 @@ def test_set_clickable():
 
     assert clicked == []
     assert not button_at(view, "A0").isEnabled()
+    assert button_at(view, "A0").cursor().shape() == Qt.CursorShape.ArrowCursor
+
+    view.set_clickable(True)
+    assert button_at(view, "A0").cursor().shape() == Qt.CursorShape.PointingHandCursor
