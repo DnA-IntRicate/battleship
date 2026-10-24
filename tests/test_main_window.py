@@ -124,6 +124,36 @@ def test_resign(monkeypatch: pytest.MonkeyPatch):
     assert window.disconnect_button.isEnabled()
 
 
+def test_handoff_hides_boards_until_next_player_takes_over():
+    p2_fleet = "." * 95 + "DD..."
+    port = FakePort("OK", f"BOARD:P2:{FLEET}:{EMPTY}", f"BOARD:P2:{p2_fleet}:{EMPTY}")
+    window = make_window(port)
+
+    # P1's view arrives, but it is P2's turn: P1's fleet must not be shown.
+    window.connect_button.click()
+    assert window.handing_off
+    assert window.own_view._cells[0].text() == ""
+    assert "Pass the computer to P2" in window.handoff_label.text()
+    assert not window.resign_button.isEnabled()
+
+    window.handoff_button.click()
+
+    assert port.written[-1] == b"STATE:P2\n"
+    assert window.viewer.value == "P2"
+    assert not window.handing_off
+    assert window.viewer_label.text() == "<b>P2's boards</b>"
+    assert window.own_view._cells[95].text() == "D"
+
+
+def test_game_over_shows_boards_without_handoff():
+    window = make_window(FakePort("OK", f"BOARD:--:{FLEET}:{EMPTY}"))
+
+    window.connect_button.click()
+
+    assert not window.handing_off
+    assert window.own_view._cells[0].text() == "C"
+
+
 def test_disconnect():
     port = FakePort("OK", "NACK:NOGAME", "OK")
     window = make_window(port)

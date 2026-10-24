@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
     QPushButton,
+    QStackedWidget,
     QVBoxLayout,
     QWidget,
 )
@@ -107,6 +108,8 @@ class MainWindow(QMainWindow):
         controls.addWidget(self.new_button)
         controls.addWidget(self.resign_button)
 
+        # Page 1: the current player's boards.
+        self.viewer_label = QLabel()
         self.own_view = BoardView("Your fleet")
         self.target_view = BoardView("Your shots")
 
@@ -114,13 +117,36 @@ class MainWindow(QMainWindow):
         boards.addWidget(self.own_view)
         boards.addWidget(self.target_view)
 
+        boards_page = QWidget()
+        boards_layout = QVBoxLayout(boards_page)
+        boards_layout.addWidget(self.viewer_label)
+        boards_layout.addLayout(boards)
+
+        # Page 2: covers the boards while the computer is passed to the other player.
+        self.handoff_label = QLabel()
+        self.handoff_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.handoff_button = QPushButton()
+        self.handoff_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.handoff_button.clicked.connect(self.take_over)
+
+        handoff_page = QWidget()
+        handoff_layout = QVBoxLayout(handoff_page)
+        handoff_layout.addStretch()
+        handoff_layout.addWidget(self.handoff_label)
+        handoff_layout.addWidget(self.handoff_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        handoff_layout.addStretch()
+
+        self.pages = QStackedWidget()
+        self.pages.addWidget(boards_page)
+        self.pages.addWidget(handoff_page)
+
         self.status = QLabel()
         self.status.setWordWrap(True)
         self.show_status("Not connected. Choose the board's port and press Connect.")
 
         layout = QVBoxLayout()
         layout.addLayout(controls)
-        layout.addLayout(boards)
+        layout.addWidget(self.pages)
         layout.addWidget(self.status)
 
         central = QWidget()
@@ -208,11 +234,13 @@ class MainWindow(QMainWindow):
         elif tag == "disconnect":
             self.connected = False
             self.close_requested.emit()
+            self.viewer = Player.P1
             self.show_board(None)
             self.show_status("Disconnected.")
         elif tag == "state" and isinstance(reply, Board):
             self.show_board(reply)
         elif tag == "new":
+            self.viewer = Player.P1  # P1 always places first
             self.show_status(f"New game. {Player.P1}, place your ships.")
             self.request_state()
         elif tag == "resign":
@@ -238,9 +266,36 @@ class MainWindow(QMainWindow):
     # Display
 
     def show_board(self, board: Board | None):
+        """Draw the viewer's boards, or cover them if the turn has passed to the other player."""
         self.board = board
+
+        if board is not None and board.turn is not None and board.turn != self.viewer:
+            # Hotseat: never leave one player's fleet on screen for the other.
+            self.own_view.show_board(EMPTY)
+            self.target_view.show_board(EMPTY)
+            self.handoff_label.setText(
+                f"<h2>Pass the computer to {board.turn}</h2>"
+                f"<p>{self.viewer}, look away from the screen.</p>"
+            )
+            self.handoff_button.setText(f"I'm {board.turn}, show my boards")
+            self.pages.setCurrentIndex(1)
+            return
+
+        self.pages.setCurrentIndex(0)
+        self.viewer_label.setText(f"<b>{self.viewer}'s boards</b>" if board else "")
         self.own_view.show_board(board.own if board else EMPTY)
         self.target_view.show_board(board.target if board else EMPTY)
+
+    @property
+    def handing_off(self) -> bool:
+        return self.pages.currentIndex() == 1
+
+    @Slot()
+    def take_over(self):
+        """The next player is at the screen: show their boards."""
+        if self.board is not None and self.board.turn is not None:
+            self.viewer = self.board.turn
+            self.request_state()
 
     def show_status(self, text: str, error: bool = False):
         self.status.setText(text)
@@ -261,7 +316,10 @@ class MainWindow(QMainWindow):
         self.connect_button.setEnabled(idle and not self.connected)
         self.disconnect_button.setEnabled(idle and self.connected and not self.in_game)
         self.new_button.setEnabled(idle and self.connected and not self.in_game)
-        self.resign_button.setEnabled(idle and self.connected and self.in_game)
+        self.resign_button.setEnabled(
+            idle and self.connected and self.in_game and not self.handing_off
+        )
+        self.handoff_button.setEnabled(idle)
         self.disconnect_button.setToolTip("Resign the game first." if self.in_game else "")
         self.own_view.set_clickable(False)
         self.target_view.set_clickable(False)
