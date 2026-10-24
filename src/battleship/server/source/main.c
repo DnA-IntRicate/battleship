@@ -262,6 +262,9 @@ static void status_led(bs_state_t state)
      * Off: Game over
      */
 
+    // Clear the pins first
+    HAL_GPIO_WritePin(GPIOB, GPIO_PIN_10 | GPIO_PIN_11, RESET);
+
     // PB10 = Red; PB11 = Green
     switch (state)
     {
