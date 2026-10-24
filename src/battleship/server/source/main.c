@@ -19,12 +19,17 @@ uint8_t g_prev_turn;
 struct uart_state_t
 {
     UART_HandleTypeDef huart1;
-    uint8_t rx_byte;
-
-    volatile uint8_t tx_ready;
-    size_t tx_len;
     char tx_buf[BS_REPLY_BUF];
 } g_uart_state;
+
+// The max size of the receive ring buffer.
+#define RX_RING_SIZE 256u
+
+// Receive ring buffer.
+// Filled by the USART1 ISR, drained by the main loop.
+static volatile uint8_t g_rx_ring[RX_RING_SIZE];
+static volatile uint32_t g_rx_head;
+static volatile uint32_t g_rx_tail;
 
 // Hardware initalization
 static void syclk_config(void);
@@ -40,8 +45,8 @@ static void status_led(bs_state_t state);
 static void status_lcd(bs_state_t state, uint8_t turn);
 
 // Server & message handling
-static void recv(void);
-static void send(void);
+static bool rx_pop(uint8_t* out);
+static void send(size_t len);
 
 /**
   * @brief  The application entry point.
@@ -65,26 +70,31 @@ int main(void)
     // Initialize server state
     bs_server_init(&g_server);
 
-    // Begin receive loop (interrupt mode)
-    g_uart_state.tx_ready = 0;
-    recv();
-
     // Set initial state
     g_prev_state = bs_server_get_state(&g_server);
     g_prev_turn  = bs_server_get_turn(&g_server);
     status_led(g_prev_state);
 
+    // Begin continuous reception
+    USART1->CR1 |= USART_CR1_RXNEIE;
+
     while (1)
     {
-        // Handle reply transmission
-        if (g_uart_state.tx_ready)
+        // Feed one received byte per iteration so the status update below
+        // is never starved by a burst of input
+        uint8_t byte;
+        if (rx_pop(&byte))
         {
-            // Transmit reply
-            send();
-            g_uart_state.tx_ready = 0;
+            const size_t len = bs_server_feed(&g_server, byte, HAL_GetTick(), g_uart_state.tx_buf);
+            if (len > 0)
+            {
+                // Handle invalid reply lengths
+                if ((len > sizeof(g_uart_state.tx_buf)) || (len > UINT16_MAX))
+                    err_handler();
 
-            // Resume reception after a reply has been sent
-            recv();
+                // Bytes that arrive while we transmit are buffered by the ISR
+                send(len);
+            }
         }
 
         bs_state_t state = bs_server_get_state(&g_server);
@@ -173,37 +183,32 @@ static void usart1_uart_init(void)
         err_handler();
 
     // Enable interrupts
+    USART1->CR3 |= USART_CR3_EIE; // Error ORE/FE/NE
     NVIC_EnableIRQ(USART1_IRQn);
-}
-
-// Override the UART rx callback
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef* huart)
-{
-    if (huart->Instance != USART1)
-        return;
-
-    const size_t len = bs_server_feed(&g_server, g_uart_state.rx_byte, HAL_GetTick(), g_uart_state.tx_buf);
-    if (len > 0)
-    {
-        // Handle invalid reply lengths
-        if ((len > sizeof(g_uart_state.tx_buf)) || (len > UINT16_MAX))
-            err_handler();
-
-        g_uart_state.tx_len   = len;
-        g_uart_state.tx_ready = 1;
-
-        // Pause reception until the main loop transmits the reply
-        return;
-    }
-
-    // The frame is incomplete, so receive the next byte
-    recv();
 }
 
 // Override the UART interrupt handler
 void USART1_IRQHandler(void)
 {
-    HAL_UART_IRQHandler(&g_uart_state.huart1);
+    // Clear any overrun / noise / framing / parity error flags
+    if (USART1->ISR & (USART_ISR_ORE | USART_ISR_NE | USART_ISR_FE | USART_ISR_PE))
+        USART1->ICR = USART_ICR_ORECF | USART_ICR_NCF | USART_ICR_FECF | USART_ICR_PECF;
+
+    // Reading RDR clears RXNE
+    if (USART1->ISR & USART_ISR_RXNE)
+    {
+        const uint8_t byte  = (uint8_t)USART1->RDR;
+        const uint32_t head = g_rx_head;
+        const uint32_t next = (head + 1u) & (RX_RING_SIZE - 1u);
+
+        // If the ring is full the byte is dropped.
+        // The server handles any garbage results.
+        if (next != g_rx_tail)
+        {
+            g_rx_ring[head] = byte;
+            g_rx_head       = next;
+        }
+    }
 }
 
 static void startup_anim(void)
@@ -306,18 +311,22 @@ static void status_lcd(bs_state_t state, uint8_t turn)
     }
 }
 
-static void recv(void)
+static bool rx_pop(uint8_t* out)
 {
-    if (HAL_UART_Receive_IT(&g_uart_state.huart1, &g_uart_state.rx_byte, 1) != HAL_OK)
-        err_handler();
+    const uint32_t tail = g_rx_tail;
+    if (tail == g_rx_head)
+        return false;
+
+    *out      = g_rx_ring[tail];
+    g_rx_tail = (tail + 1u) & (RX_RING_SIZE - 1u);
+
+    return true;
 }
 
-static void send(void)
+static void send(size_t len)
 {
-    const uint16_t len  = (uint16_t)g_uart_state.tx_len;
     const uint8_t* data = (uint8_t*)g_uart_state.tx_buf;
-
-    if (HAL_UART_Transmit(&g_uart_state.huart1, data, len, HAL_MAX_DELAY) != HAL_OK)
+    if (HAL_UART_Transmit(&g_uart_state.huart1, data, (uint16_t)len, HAL_MAX_DELAY) != HAL_OK)
         err_handler();
 }
 
