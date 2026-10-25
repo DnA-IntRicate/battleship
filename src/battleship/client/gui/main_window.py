@@ -236,7 +236,26 @@ class MainWindow(QMainWindow):
 
     @Slot()
     def disconnect_from_board(self):
-        self.send("disconnect", lambda s: s.disconnect())
+        if not self.in_game:
+            self.send("disconnect", lambda s: s.disconnect())
+            return
+
+        # The server refuses DISCONNECT mid-game, so just close our side. The
+        # game stays on the board and CONNECT rejoins it (protocol §4).
+        if self.confirm(
+            "Close the connection? The game stays on the board, and Connect rejoins it."
+        ):
+            self.close_locally(
+                "Disconnected. The game is still on the board: Connect to rejoin it."
+            )
+
+    def close_locally(self, message: str):
+        """Close the port without telling the server, e.g. mid-game or when it is not answering."""
+        self.connected = False
+        self.close_requested.emit()
+        self.forget_game()
+        self.show_status(message)
+        self.update_controls()
 
     @Slot()
     def new_game(self):
@@ -289,11 +308,7 @@ class MainWindow(QMainWindow):
             self.show_status(f"Connected to {self.port_box.currentData()}.")
             self.request_state()
         elif tag == "disconnect":
-            self.connected = False
-            self.close_requested.emit()
-            self.viewer = Player.P1
-            self.show_board(None)
-            self.show_status("Disconnected.")
+            self.close_locally("Disconnected.")
         elif tag == "state" and isinstance(reply, Board):
             self.show_board(reply)
         elif tag == "new":
@@ -319,6 +334,9 @@ class MainWindow(QMainWindow):
         if tag == "connect":
             self.connected = False
             self.show_status(f"Could not connect: {message}", error=True)
+        elif tag == "disconnect":
+            # The board did not answer DISCONNECT; close our side anyway.
+            self.close_locally(f"Disconnected (the board did not answer: {message}).")
         else:
             self.show_status(f"No valid reply from the board: {message}", error=True)
 
@@ -463,13 +481,12 @@ class MainWindow(QMainWindow):
         self.port_box.setEnabled(idle and not self.connected)
         self.refresh_button.setEnabled(idle and not self.connected)
         self.connect_button.setEnabled(idle and not self.connected)
-        self.disconnect_button.setEnabled(idle and self.connected and not self.in_game)
+        self.disconnect_button.setEnabled(idle and self.connected)
         self.new_button.setEnabled(idle and self.connected and not self.in_game)
         self.resign_button.setEnabled(
             idle and self.connected and self.in_game and not self.handing_off
         )
         self.handoff_button.setEnabled(idle)
-        self.disconnect_button.setToolTip("Resign the game first." if self.in_game else "")
         self.placement_bar.setEnabled(idle)
         self.own_view.set_clickable(idle and self.placing and not self.handing_off)
         self.target_view.set_clickable(idle and self.firing and not self.handing_off)

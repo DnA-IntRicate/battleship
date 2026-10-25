@@ -66,18 +66,47 @@ def test_connect_without_port():
     assert window.status.text() == "Choose a serial port first."
 
 
-def test_disconnect_disabled_mid_game():
-    window = make_window(FakePort("OK", f"BOARD:P1:{FLEET}:{EMPTY}", "NACK:BADSTATE"))
+def test_disconnect_mid_game_closes_locally(monkeypatch: pytest.MonkeyPatch):
+    port = FakePort("OK", f"BOARD:P1:{FLEET}:{EMPTY}")
+    window = make_window(port)
+    window.connect_button.click()
+    monkeypatch.setattr(window, "confirm", lambda _question: True)
+    assert window.disconnect_button.isEnabled()
+
+    window.disconnect_button.click()
+
+    # No DISCONNECT is sent: the server would refuse it, and the game must survive.
+    assert b"DISCONNECT\n" not in port.written
+    assert port.closed
+    assert not window.connected
+    assert window.connect_button.isEnabled()
+    assert window.status.text() == (
+        "Disconnected. The game is still on the board: Connect to rejoin it."
+    )
+
+
+def test_disconnect_mid_game_can_be_cancelled(monkeypatch: pytest.MonkeyPatch):
+    port = FakePort("OK", f"BOARD:P1:{FLEET}:{EMPTY}")
+    window = make_window(port)
+    window.connect_button.click()
+    monkeypatch.setattr(window, "confirm", lambda _question: False)
+
+    window.disconnect_button.click()
+
+    assert window.connected
+    assert not port.closed
+
+
+def test_disconnect_from_silent_board_still_closes():
+    port = FakePort("OK", "NACK:NOGAME")  # then no reply to DISCONNECT
+    window = make_window(port)
     window.connect_button.click()
 
-    assert not window.disconnect_button.isEnabled()
-    assert window.disconnect_button.toolTip() == "Resign the game first."
+    window.disconnect_button.click()
 
-    # The server still decides: if the request were sent anyway, its reason is shown.
-    window.disconnect_from_board()
-    assert window.connected
-    assert window.status.text() == "That is not allowed at this point in the game."
-    assert window.status.property("error")
+    assert port.closed
+    assert not window.connected
+    assert window.status.text().startswith("Disconnected (the board did not answer")
 
 
 def test_new_game():
