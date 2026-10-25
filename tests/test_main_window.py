@@ -4,7 +4,9 @@ import pytest
 
 # Draw widgets in memory, so the tests also run on machines without a screen (CI).
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-QtWidgets = pytest.importorskip("PySide6.QtWidgets")
+# ImportError, not just a missing module: Qt can be installed but lack system
+# libraries such as libEGL, and these tests should then skip, not error.
+QtWidgets = pytest.importorskip("PySide6.QtWidgets", exc_type=ImportError)
 
 from test_worker import FakePort  # noqa: E402
 
