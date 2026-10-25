@@ -16,12 +16,6 @@ from battleship.client.session import REPLY_TIMEOUT_S, GameSession
 
 PARTIAL_TIMEOUT_S = 0.5  # protocol §2.3
 
-# Firmware bug: bytes that arrive while the server sends a reply cause a UART
-# overrun, which switches reception off until the board is reset. Running these
-# tests would leave the board deaf for every test after them.
-# TODO: remove once the firmware keeps reception armed and handles UART errors.
-overrun_bug = pytest.mark.skip(reason="firmware bug: a UART overrun disables reception until reset")
-
 
 def drain(session: GameSession):
     """Discard anything the server has already sent."""
@@ -115,7 +109,6 @@ def test_partial_frame_discarded_after_timeout(session: GameSession):
     assert raw_exchange(session, b"STATE:P1\n") == before[0]
 
 
-@overrun_bug
 def test_server_survives_garbage_burst(session: GameSession):
     start_game(session)
     before = snapshot(session)
@@ -129,7 +122,6 @@ def test_server_survives_garbage_burst(session: GameSession):
     assert snapshot(session) == before
 
 
-@overrun_bug
 def test_back_to_back_requests(session: GameSession):
     # One reply per request (protocol §2.2), even when sent in one write.
     start_game(session)
