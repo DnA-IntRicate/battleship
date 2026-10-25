@@ -118,7 +118,7 @@ def test_resign(monkeypatch: pytest.MonkeyPatch):
     window.resign_button.click()
 
     assert b"RESIGN:P1\n" in port.written
-    assert window.status.text() == "P1 resigned. Game over."
+    assert window.status.text() == "P1 resigned. Game over. Press New Game to play again."
     assert not window.in_game
     assert window.new_button.isEnabled()
     assert window.disconnect_button.isEnabled()
@@ -223,6 +223,127 @@ def test_complete_fleet_hands_over_to_p2():
     assert b"PLACE:P1:D:J0:H\n" in port.written
     assert window.handing_off
     assert window.status.text() == "P1's turn is over. Pass the computer to P2."
+
+
+# A complete fleet (17 ship cells), so the window is in the firing phase.
+FULL = "CCCCC....." + "BBBB......" + "RRR......." + "SSS......." + "DD........" + "." * 50
+HIT_A0 = "X" + EMPTY[1:]
+
+
+def firing_window(*replies: str) -> tuple[MainWindow, FakePort]:
+    """A connected window where it is P1's turn to fire, then `replies`."""
+    port = FakePort("OK", f"BOARD:P1:{FULL}:{EMPTY}", *replies)
+    window = make_window(port)
+    window.connect_button.click()
+
+    return window, port
+
+
+def test_firing_enables_only_the_shots_grid():
+    window, _ = firing_window()
+
+    assert window.firing
+    assert window.placement_bar.isHidden()
+    assert window.target_view._cells[0].isEnabled()
+    assert not window.own_view._cells[0].isEnabled()
+    assert window.status.text() == "P1, your turn: click a cell on Your shots to fire."
+
+
+def test_fire_shows_result_and_hands_over():
+    window, port = firing_window("OK:HIT", f"BOARD:P2:{FULL}:{HIT_A0}")
+
+    window.target_view._cells[0].click()  # A0
+
+    assert b"MOVE:P1:A0\n" in port.written
+    assert window.handing_off
+    assert "P1 fired at A0: hit." in window.handoff_label.text()
+    assert window.status.text() == (
+        "P1 fired at A0: hit. P1's turn is over. Pass the computer to P2."
+    )
+
+
+def test_next_player_is_told_the_last_shot():
+    p2_own = "X" + FULL[1:]
+    window, _ = firing_window("OK:HIT", f"BOARD:P2:{FULL}:{HIT_A0}", f"BOARD:P2:{p2_own}:{EMPTY}")
+    window.target_view._cells[0].click()
+
+    window.handoff_button.click()
+
+    assert window.own_view._cells[0].text() == "✕"
+    assert window.status.text() == (
+        "P1 fired at A0: hit. P2, your turn: click a cell on Your shots to fire."
+    )
+
+
+def test_sunk_names_the_ship():
+    window, _ = firing_window("OK:SUNK:D", f"BOARD:P2:{FULL}:{EMPTY}")
+
+    window.target_view._cells[41].click()  # E1
+
+    assert window.last_shot == "P1 fired at E1 and sank the Destroyer!"
+
+
+def test_win_ends_game_and_disables_moves():
+    window, _ = firing_window("WIN:P1", f"BOARD:--:{FULL}:{HIT_A0}")
+
+    window.target_view._cells[0].click()
+
+    assert not window.in_game
+    assert not window.handing_off
+    assert window.status.text() == "P1 wins! Game over. Press New Game to play again."
+    assert not window.target_view._cells[1].isEnabled()
+    assert not window.own_view._cells[0].isEnabled()
+    assert window.new_button.isEnabled()
+
+
+def test_rejected_shot_shows_reason_and_keeps_turn():
+    window, _ = firing_window("NACK:OCCUPIED")
+
+    window.target_view._cells[0].click()
+
+    assert window.status.text() == "You have already fired at that cell."
+    assert window.status.property("error")
+    assert window.firing
+    assert window.target_view._cells[0].isEnabled()
+
+
+RESET_MESSAGE = "The board was reset, so the game was lost. Press New Game to start again."
+
+
+def test_board_reboot_reconnects_and_resyncs():
+    # After the reset button the board has no session: the shot gets NOSESSION.
+    window, port = firing_window("NACK:NOSESSION", "OK", "NACK:NOGAME")
+
+    window.target_view._cells[0].click()
+
+    assert port.written[-3:] == [b"\n", b"CONNECT\n", b"STATE:P1\n"]
+    assert window.connected
+    assert window.status.text() == RESET_MESSAGE
+    assert not window.in_game
+    assert window.own_view._cells[0].text() == ""
+    assert window.new_button.isEnabled()
+    assert window.disconnect_button.isEnabled()
+
+
+def test_game_reset_with_session_kept():
+    # A game reset that keeps the session gives NOGAME instead.
+    window, port = firing_window("NACK:NOGAME", "NACK:NOGAME")
+
+    window.target_view._cells[0].click()
+
+    assert port.written[-1] == b"STATE:P1\n"
+    assert window.status.text() == RESET_MESSAGE
+    assert window.new_button.isEnabled()
+
+
+def test_reconnect_after_reset_can_fail():
+    window, _ = firing_window("NACK:NOSESSION")  # then the board stops answering
+
+    window.target_view._cells[0].click()
+
+    assert not window.connected
+    assert window.status.text().startswith("Could not connect")
+    assert window.connect_button.isEnabled()
 
 
 def test_disconnect():

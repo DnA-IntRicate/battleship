@@ -26,7 +26,7 @@ from serial.tools import list_ports
 
 from battleship.client.gui.board_view import BoardView
 from battleship.client.gui.worker import Request, SerialWorker
-from battleship.client.protocol import FLEET, NUM_CELLS, Board, Nack, Ok, Player, Reply
+from battleship.client.protocol import FLEET, NUM_CELLS, Board, Nack, Ok, Player, Reply, Win
 
 EMPTY = "." * NUM_CELLS
 
@@ -53,6 +53,8 @@ class MainWindow(QMainWindow):
         self.busy = False  # a request is waiting for its reply
         self.board: Board | None = None  # last board the server sent
         self.viewer = Player.P1  # whose boards are shown
+        self.last_shot = ""  # e.g. "P1 fired at B7: hit.", shown to both players
+        self.result = ""  # e.g. "P1 wins!", shown once the game is over
 
         self._build_ui()
 
@@ -119,6 +121,7 @@ class MainWindow(QMainWindow):
         self.own_view = BoardView("Your fleet")
         self.target_view = BoardView("Your shots")
         self.own_view.cell_clicked.connect(self.on_own_cell)
+        self.target_view.cell_clicked.connect(self.on_target_cell)
 
         # Placement controls, shown only while the viewer is placing ships.
         self.ship_box = QComboBox()
@@ -261,9 +264,24 @@ class MainWindow(QMainWindow):
         self.busy = False
 
         if tag == "state" and reply == Nack("NOGAME"):
-            # Not an error: there is simply no game yet.
-            self.show_board(None)
-            self.show_status("Connected. No game in progress.")
+            if self.in_game:
+                # We were mid-game, but the server has no game: it was reset.
+                self.forget_game()
+                self.show_status(
+                    "The board was reset, so the game was lost. Press New Game to start again."
+                )
+            else:
+                # Not an error: there is simply no game yet.
+                self.show_board(None)
+                self.show_status("Connected. No game in progress.")
+        elif reply == Nack("NOSESSION") and tag != "connect":
+            # The board rebooted (reset button) and forgot our CONNECT.
+            # Reconnect; the STATE that follows tells us what survived.
+            self.show_status("The board was reset. Reconnecting…")
+            self.send("connect", lambda s: s.connect())
+        elif reply == Nack("NOGAME") and self.in_game:
+            # The game was wiped while we thought it was running; confirm with STATE.
+            self.request_state()
         elif isinstance(reply, Nack):
             self.show_status(reply.message, error=True)
         elif tag == "connect":
@@ -280,11 +298,15 @@ class MainWindow(QMainWindow):
             self.show_board(reply)
         elif tag == "new":
             self.viewer = Player.P1  # P1 always places first
+            self.last_shot = self.result = ""
             self.show_status(f"New game. {Player.P1}, place your ships.")
             self.request_state()
         elif tag == "resign":
             resigned = self.board.turn if self.board else "The player"
-            self.show_status(f"{resigned} resigned. Game over.")
+            self.result = f"{resigned} resigned."
+            self.request_state()
+        elif tag.startswith("fire:"):
+            self.record_shot(tag.removeprefix("fire:"), reply)
             self.request_state()
         elif isinstance(reply, Ok):
             self.request_state()
@@ -313,12 +335,16 @@ class MainWindow(QMainWindow):
             self.own_view.show_board(EMPTY)
             self.target_view.show_board(EMPTY)
             self.handoff_label.setText(
+                f"<p>{self.last_shot}</p>"
                 f"<h2>Pass the computer to {board.turn}</h2>"
                 f"<p>{self.viewer}, look away from the screen.</p>"
             )
             self.handoff_button.setText(f"I'm {board.turn}, show my boards")
             self.pages.setCurrentIndex(1)
-            self.show_status(f"{self.viewer}'s turn is over. Pass the computer to {board.turn}.")
+            self.show_status(
+                f"{self.last_shot} {self.viewer}'s turn is over. "
+                f"Pass the computer to {board.turn}.".lstrip()
+            )
             return
 
         self.pages.setCurrentIndex(0)
@@ -326,6 +352,44 @@ class MainWindow(QMainWindow):
         self.own_view.show_board(board.own if board else EMPTY)
         self.target_view.show_board(board.target if board else EMPTY)
         self.update_placement()
+
+        if self.firing:
+            self.show_status(
+                f"{self.last_shot} {self.viewer}, your turn: "
+                "click a cell on Your shots to fire.".lstrip()
+            )
+        elif board is not None and board.turn is None:
+            self.show_status(f"{self.result} Game over. Press New Game to play again.".lstrip())
+
+    @property
+    def firing(self) -> bool:
+        """True while it is the viewer's turn and both fleets are placed."""
+        board = self.board
+        return board is not None and board.turn == self.viewer and not self.placing
+
+    @Slot(str)
+    def on_target_cell(self, cell: str):
+        """A click on the viewer's shots grid fires at that cell."""
+        if not self.firing:
+            return
+
+        player = self.viewer
+        self.send(f"fire:{cell}", lambda s: s.fire(player, cell))
+
+    def record_shot(self, cell: str, reply: Reply):
+        """Describe a shot the server accepted, for both players to read."""
+        shooter = self.viewer
+        match reply:
+            case Ok(("MISS",)):
+                self.last_shot = f"{shooter} fired at {cell}: miss."
+            case Ok(("HIT",)):
+                self.last_shot = f"{shooter} fired at {cell}: hit."
+            case Ok(("SUNK", ship)):
+                name = FLEET[ship][0] if ship in FLEET else ship
+                self.last_shot = f"{shooter} fired at {cell} and sank the {name}!"
+            case Win(winner):
+                self.last_shot = f"{shooter} fired at {cell} and sank the last ship."
+                self.result = f"{winner} wins!"
 
     @property
     def placing(self) -> bool:
@@ -365,6 +429,12 @@ class MainWindow(QMainWindow):
         orientation = "H" if self.horizontal.isChecked() else "V"
         self.send("place", lambda s: s.place(player, ship, cell, orientation))
 
+    def forget_game(self):
+        """Clear everything the GUI showed about a game the server no longer has."""
+        self.viewer = Player.P1
+        self.last_shot = self.result = ""
+        self.show_board(None)
+
     @property
     def handing_off(self) -> bool:
         return self.pages.currentIndex() == 1
@@ -402,7 +472,7 @@ class MainWindow(QMainWindow):
         self.disconnect_button.setToolTip("Resign the game first." if self.in_game else "")
         self.placement_bar.setEnabled(idle)
         self.own_view.set_clickable(idle and self.placing and not self.handing_off)
-        self.target_view.set_clickable(False)
+        self.target_view.set_clickable(idle and self.firing and not self.handing_off)
 
     def closeEvent(self, event: QCloseEvent):
         # Close the port on the worker's thread, then stop that thread.
