@@ -150,8 +150,23 @@ stateDiagram-v2
 - **On-board button:** pressing it discards any game and returns to `IDLE` (the session stays
   open). The server sends no message. The client finds out on its next request
   (`NACK:NOGAME`) and should show that the game was reset.
-- **On-board LED:** off in `IDLE`, solid during `P1`'s turn, off during `P2`'s turn, and
-  blinking in `GAME_OVER`.
+- **Status LED and LCD:** show the server state on the board itself (§4.1).
+
+### 4.1 Status display
+
+The two-colour status LED D9 (PB10 red, PB11 green) and the LCD show the server state.
+They are informational only: the client never depends on them.
+
+| State                   | LED D9               | LCD                                 |
+|-------------------------|----------------------|-------------------------------------|
+| `IDLE`                  | Green                | `Welcome to` / `BATTLESHIP!`        |
+| `IN_PROGRESS`, placing  | Orange (red + green) | `Planning phase` / `Turn: P1.`      |
+| `IN_PROGRESS`, firing   | Red                  | `Firing phase` / `Turn: P2.`        |
+| `GAME_OVER`             | Off                  | `GAME OVER!`                        |
+
+**Startup.** After power-up or a reset, the board shows the welcome screen and plays a
+rolling animation on LEDs PB0–PB7, which takes about 1.1 s. Reception starts only after it,
+so a request sent during startup gets no reply and the client times out; it should retry.
 
 ## 5. Board encoding
 
