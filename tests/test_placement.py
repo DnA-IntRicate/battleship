@@ -52,10 +52,6 @@ def test_duplicate_ship_rejected(session: GameSession):
     assert snapshot(session) == before
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="firmware checks RANGE before BADSHIP and DUPSHIP, against protocol 7.1",
-)
 @pytest.mark.parametrize(("ship", "reason"), [("Z", "BADSHIP"), ("C", "DUPSHIP")])
 def test_placement_check_order(session: GameSession, ship: str, reason: str):
     # Each request has two faults; §7.1 says which one is reported.
