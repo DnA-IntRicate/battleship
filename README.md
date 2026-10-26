@@ -141,9 +141,3 @@ uv run ty check
 ## Authors
 
 Muddathir Firfirey and Adam Foflonker.
-
-## Demo Video
-
-<video src="./docs/DemoVideo.mp4" controls width="100%"></video>
-
----
