@@ -133,8 +133,8 @@ stateDiagram-v2
     GAME_OVER --> IN_PROGRESS : NEW
     GAME_OVER --> IDLE : DISCONNECT
     IDLE --> IDLE : DISCONNECT
-    IN_PROGRESS --> IDLE : button
-    GAME_OVER --> IDLE : button
+    IN_PROGRESS --> IDLE : reset (reboot)
+    GAME_OVER --> IDLE : reset (reboot)
 ```
 
 | State         | Accepts                                               |
@@ -147,9 +147,11 @@ stateDiagram-v2
   rejected with `NACK:NOSESSION` until it has. `DISCONNECT` ends the session.
 - `CONNECT` is accepted in every state and **never changes the game**, so a GUI that crashed or
   was restarted can rejoin a game in progress and resync with `STATE`.
-- **On-board button:** pressing it discards any game and returns to `IDLE` (the session stays
-  open). The server sends no message. The client finds out on its next request
-  (`NACK:NOGAME`) and should show that the game was reset.
+- **Board reset:** the firmware does not use a user button. Pressing the board's reset
+  button (NRST) reboots the microcontroller, which discards the game and the session and
+  returns to `IDLE` after the ~1.1 s startup (§4.1). The server sends no message: the
+  client finds out from its next reply (`NACK:NOSESSION`), reconnects, and learns from
+  `STATE` (`NACK:NOGAME`) that the game was lost.
 - **Status LED and LCD:** show the server state on the board itself (§4.1).
 
 ### 4.1 Status display
