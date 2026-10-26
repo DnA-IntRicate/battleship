@@ -88,12 +88,6 @@ typedef struct bs_server_t
 void bs_server_init(bs_server_t* server);
 
 /**
- * Reset the server state and move to IDLE when the
- * physical reset button (NRST) is pressed.
- */
-void bs_server_reset(bs_server_t* server);
-
-/**
  * Push one received byte.
  *
  * @param `now_ms` a free running millisecond tick `(HAL_GetTick())`; wraparound is handled.

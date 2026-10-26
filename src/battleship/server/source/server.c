@@ -545,11 +545,6 @@ void bs_server_init(bs_server_t* server)
     game_reset(server);
 }
 
-void bs_server_reset(bs_server_t* server)
-{
-    game_reset(server);
-}
-
 size_t bs_server_feed(bs_server_t* server, uint8_t byte, uint32_t now_ms, char* out)
 {
     // A partial frame that has been silent for 500 ms is dropped

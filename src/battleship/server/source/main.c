@@ -1,3 +1,11 @@
+/**
+ * Battleship server main implementation header.
+ *
+ * @author Adam Foflonker, Muddathir Firfirey
+ * @date 12 Oct 2026
+ *
+ * @version 1.0
+ */
 #include <main.h>
 #include <server.h>
 #include <lcd_stm32f0.h>
